@@ -3,23 +3,23 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Google Sheets 自動作成アプリ</title>
+    <title>Google Sheets ログ管理アプリ</title>
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
 
     <div class="container">
-        <h1>スプレッドシート自動作成ツール</h1>
+        <h1>スプレッドシート ログ管理ツール</h1>
         
         <!-- 操作ボタン -->
         <div class="button-group">
-            <button id="authorize_button" onclick="handleAuthClick()" style="display: none;">Googleでログインして作成</button>
+            <button id="authorize_button" onclick="handleAuthClick()" style="display: none;">Googleでログインして処理を開始</button>
             <button id="signout_button" onclick="handleSignoutClick()" style="display: none;">ログアウト</button>
         </div>
 
         <!-- 状態を表示するエリア -->
         <div id="content" class="output-box">
-            <p>「Googleでログインして作成」ボタンを押すと、あなたのGoogleドライブにシートが2つ自動で作られます。</p>
+            <p>「Googleでログインして処理を開始」ボタンを押してください。</p>
         </div>
 
         <!-- 作成されたスプレッドシートを開くためのリンク表示エリア -->
