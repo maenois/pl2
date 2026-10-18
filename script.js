@@ -142,11 +142,14 @@ async function processLogAndNewSheet() {
         `;
 
    } catch (err) {
-        // 詳細なエラーをコンソールに出力する
-        console.error('詳細エラーオブジェクト:', err);
-
-        // 画面にも分かりやすいエラーメッセージを出す
-        const errorMsg = err.result?.error?.message || err.message || JSON.stringify(err);
-        document.getElementById('content').innerHTML = '<p style="color: red;">エラーが発生しました: ' + errorMsg + '</p>';
+        // オブジェクトの中身を文字列に変換して画面に表示する
+        let errorDetails = '';
+        try {
+            errorDetails = JSON.stringify(err, null, 2);
+        } catch (e) {
+            errorDetails = err.message || String(err);
+        }
+        
+        document.getElementById('content').innerHTML = `<pre style="color: red; text-align: left; font-size: 12px; background: #fff; padding: 10px; border: 1px solid #ccc;">エラーが発生しました:\n${errorDetails}</pre>`;
     }
 }
