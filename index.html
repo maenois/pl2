@@ -2,35 +2,30 @@
 <html lang="ja">
 <head>
     <meta charset="UTF-8">
-    <title>パスワード付き足し算アプリ</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Google Sheets API 連携</title>
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
 
-    <div class="card">
-        <!-- パスワード入力画面 -->
-        <div id="auth-screen">
-            <h2>パスワードを入力</h2>
-            <!-- <p style="font-size: 12px; color: #666;">パスワードは「1202」です</p> -->
-            <input type="password" id="pass-input" placeholder="****">
-            <br>
-            <button id="login-btn">送信</button>
-            <div id="error-msg" class="error"></div>
+    <div class="container">
+        <h1>スプレッドシート連携アプリ</h1>
+        
+        <!-- 操作ボタン -->
+        <div class="button-group">
+            <button id="authorize_button" onclick="handleAuthClick()">Googleでログイン</button>
+            <button id="signout_button" onclick="handleSignoutClick()" style="display: none;">ログアウト</button>
         </div>
 
-        <!-- 足し算アプリ画面（最初は隠れている） -->
-        <div id="app-screen" class="hidden">
-            <h1>かんたん足し算</h1>
-            <div class="input-area">
-                <input type="number" id="num1" placeholder="数字1">
-                <span>＋</span>
-                <input type="number" id="num2" placeholder="数字2">
-                <button id="calc-btn">＝</button>
-            </div>
-            <div id="result">結果はここに表示されます</div>
-        </div>
+        <!-- 読み込んだデータの表示エリア -->
+        <pre id="content"></pre>
     </div>
 
+    <!-- Google 認証 & API ライブラリの読み込み -->
+    <script async defer src="https://apis.google.com/js/api.js" onload="gapiLoaded()"></script>
+    <script async defer src="https://accounts.google.com/gsi/client" onload="gisLoaded()"></script>
+    
+    <!-- JavaScript本体 -->
     <script src="script.js"></script>
 </body>
 </html>
