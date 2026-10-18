@@ -1,5 +1,7 @@
-// クライアントIDの設定（ここにあなたの取得したクライアントIDを貼り付けてください）
+// クライアントIDとGoogle Cloud Consoleのプロジェクト番号（APIキーとDeveloper Key）の設定
 const CLIENT_ID = '893360002885-juvu8vp11q6si42ebojo4i483vd3sqkl.apps.googleusercontent.com';
+const API_KEY = 'YOUR_API_KEY'; // Google Cloud Consoleで発行した「APIキー」を入れてください
+const APP_ID = 'YOUR_PROJECT_NUMBER'; // プロジェクト番号（数値）
 
 const SCOPES = 'https://www.googleapis.com/auth/spreadsheets https://www.googleapis.com/auth/drive.file';
 const DISCOVERY_DOCS = [
@@ -10,9 +12,12 @@ const DISCOVERY_DOCS = [
 let tokenClient;
 let gapiInited = false;
 let ginisInited = false;
+let pickerInited = false;
+let accessToken = null;
 
 function gapiLoaded() {
     gapi.load('client', initializeGapiClient);
+    gapi.load('picker', () => { pickerInited = true; });
 }
 
 async function initializeGapiClient() {
@@ -27,7 +32,13 @@ function gisLoaded() {
     tokenClient = google.accounts.oauth2.initTokenClient({
         client_id: CLIENT_ID,
         scope: SCOPES,
-        callback: '',
+        callback: (resp) => {
+            if (resp.error !== undefined) {
+                throw (resp);
+            }
+            accessToken = resp.access_token;
+            onLoginSuccess();
+        },
     });
     ginisInited = true;
     maybeEnableButtons();
@@ -40,28 +51,21 @@ function maybeEnableButtons() {
 }
 
 function handleAuthClick() {
-    tokenClient.callback = async (resp) => {
-        if (resp.error !== undefined) {
-            throw (resp);
-        }
-        document.getElementById('signout_button').style.display = 'inline-block';
-        document.getElementById('authorize_button').style.display = 'none';
-        document.getElementById('app_section').style.display = 'block';
-        
-        // 保存されているフォルダIDがあればフォームに反映する
-        const savedFolderId = localStorage.getItem('app_target_folder_id');
-        if (savedFolderId) {
-            document.getElementById('folder_id_input').value = savedFolderId;
-        }
+    tokenClient.requestAccessToken({prompt: ''});
+}
 
-        document.getElementById('content').innerHTML = '<p>ログインしました。シート名を入力して作成ボタンを押してください。</p>';
-    };
-
-    if (gapi.client.getToken() === null) {
-        tokenClient.requestAccessToken({prompt: 'consent'});
-    } else {
-        tokenClient.requestAccessToken({prompt: ''});
+function onLoginSuccess() {
+    document.getElementById('signout_button').style.display = 'inline-block';
+    document.getElementById('authorize_button').style.display = 'none';
+    document.getElementById('app_section').style.display = 'block';
+    
+    // 保存されているフォルダ名・IDがあれば復元
+    const savedName = localStorage.getItem('app_target_folder_name');
+    if (savedName) {
+        document.getElementById('selected_folder_name').innerText = savedName;
     }
+
+    document.getElementById('content').innerHTML = '<p>ログインしました。保存先フォルダを選んでシート作成ボタンを押してください。</p>';
 }
 
 function handleSignoutClick() {
@@ -69,6 +73,7 @@ function handleSignoutClick() {
     if (token !== null) {
         google.accounts.oauth2.revoke(token.access_token, () => {
             gapi.client.setToken('');
+            accessToken = null;
             document.getElementById('content').innerHTML = '<p>ログアウトしました。</p>';
             document.getElementById('links').innerHTML = '';
             document.getElementById('app_section').style.display = 'none';
@@ -78,14 +83,46 @@ function handleSignoutClick() {
     }
 }
 
-// フォルダIDを保存するボタンの処理
-function saveFolderId() {
-    const folderId = document.getElementById('folder_id_input').value.trim();
-    localStorage.setItem('app_target_folder_id', folderId);
-    alert('保存先フォルダIDを更新しました！');
+// Google Picker（フォルダ選択ウィンドウ）を開く関数
+function openFolderPicker() {
+    if (!pickerInited || !accessToken) {
+        alert('Google APIの初期化中または未ログインです。');
+        return;
+    }
+
+    // フォルダのみを選択できるビューを設定
+    const view = new google.picker.DocsView(google.picker.ViewId.FOLDERS)
+        .setSelectFolderEnabled(true)
+        .setMimeTypes('application/vnd.google-apps.folder');
+
+    const picker = new google.picker.PickerBuilder()
+        .enableFeature(google.picker.Feature.NAV_HIDDEN)
+        .setAppId(APP_ID)
+        .setOAuthToken(accessToken)
+        .addView(view)
+        .setDeveloperKey(API_KEY)
+        .setCallback(pickerCallback)
+        .build();
+    
+    picker.setVisible(true);
 }
 
-// フォルダを指定してスプレッドシートを作成するヘルパー関数
+// フォルダが選択されたときのコールバック
+function pickerCallback(data) {
+    if (data[google.picker.Response.ACTION] == google.picker.Action.PICKED) {
+        const doc = data[google.picker.Response.DOCUMENTS][0];
+        const folderId = doc[google.picker.Document.ID];
+        const folderName = doc[google.picker.Document.NAME];
+
+        // 選択されたフォルダ情報を保存
+        localStorage.setItem('app_target_folder_id', folderId);
+        localStorage.setItem('app_target_folder_name', folderName);
+
+        document.getElementById('selected_folder_name').innerText = `📁 ${folderName}`;
+    }
+}
+
+// フォルダを指定してスプレッドシートを作成するヘルパー
 async function createSpreadsheetInFolder(title, folderId) {
     const resource = {
         name: title,
@@ -105,7 +142,7 @@ async function createSpreadsheetInFolder(title, folderId) {
 // 新規シート作成＆ログ記録のメイン処理
 async function createNewSheet() {
     try {
-        const targetFolderId = document.getElementById('folder_id_input').value.trim();
+        const targetFolderId = localStorage.getItem('app_target_folder_id') || '';
         const newSheetTitle = document.getElementById('sheet_title_input').value.trim() || 'カスタムデータシート';
 
         document.getElementById('content').innerHTML = '<p>処理を実行中...</p>';
@@ -113,11 +150,9 @@ async function createNewSheet() {
         let logSheetId = localStorage.getItem('app_log_sheet_id');
 
         if (!logSheetId) {
-            // 1. ログ用シートを指定フォルダ内に作成
             logSheetId = await createSpreadsheetInFolder('アプリ用ログ管理シート', targetFolderId);
             localStorage.setItem('app_log_sheet_id', logSheetId);
 
-            // 最初のシート名を取得してヘッダーを書き込む
             const spreadsheetInfo = await gapi.client.sheets.spreadsheets.get({ spreadsheetId: logSheetId });
             const firstSheetName = spreadsheetInfo.result.sheets[0].properties.title;
 
@@ -133,11 +168,9 @@ async function createNewSheet() {
 
         document.getElementById('content').innerHTML = `<p>「${newSheetTitle}」を作成中...</p>`;
 
-        // 2. 2つ目（以降）の新しいシートを指定フォルダ内に作成
         const newSheetId = await createSpreadsheetInFolder(newSheetTitle, targetFolderId);
         const newSheetUrl = `https://docs.google.com/spreadsheets/d/${newSheetId}/edit`;
 
-        // 3. ログ用シートに記録を追記
         const logSpreadsheetInfo = await gapi.client.sheets.spreadsheets.get({ spreadsheetId: logSheetId });
         const logFirstSheetName = logSpreadsheetInfo.result.sheets[0].properties.title;
 
@@ -152,7 +185,6 @@ async function createNewSheet() {
             }
         });
 
-        // 4. 完了画面とリンクを表示
         document.getElementById('content').innerText = 
             `処理が完了しました！\n新しいシートを作成し、ログに追加しました。`;
 
