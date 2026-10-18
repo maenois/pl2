@@ -1,7 +1,6 @@
-// クライアントIDの設定
-const CLIENT_ID = '893360002885-juvu8vp11q6si42ebojo4i483vd3sqkl.apps.googleusercontent.com';
+// クライアントIDの設定（ここにあなたの取得したクライアントIDを貼り付けてください）
+const CLIENT_ID = 'YOUR_CLIENT_ID.apps.googleusercontent.com';
 
-// ドライブ・スプレッドシートの作成・編集権限を含むスコープ
 const SCOPES = 'https://www.googleapis.com/auth/spreadsheets';
 const DISCOVERY_DOC = 'https://sheets.googleapis.com/$discovery/rest?version=v4';
 
@@ -45,7 +44,7 @@ function handleAuthClick() {
         document.getElementById('signout_button').style.display = 'inline-block';
         document.getElementById('authorize_button').innerText = '再認証';
         
-        // ログイン成功後に、スプレッドシートを2つ自動作成する関数を呼び出す
+        // ログイン成功後に、スプレッドシートを2つ自動作成する
         await createTwoSpreadsheets();
     };
 
@@ -61,9 +60,10 @@ function handleSignoutClick() {
     if (token !== null) {
         google.accounts.oauth2.revoke(token.access_token, () => {
             gapi.client.setToken('');
-            document.getElementById('content').innerText = 'ログアウトしました。';
+            document.getElementById('content').innerHTML = '<p>ログアウトしました。「Googleでログインして作成」ボタンから再度実行できます。</p>';
+            document.getElementById('links').innerHTML = '';
             document.getElementById('signout_button').style.display = 'none';
-            document.getElementById('authorize_button').innerText = 'Googleでログイン';
+            document.getElementById('authorize_button').innerText = 'Googleでログインして作成';
         });
     }
 }
@@ -71,13 +71,13 @@ function handleSignoutClick() {
 // ユーザーのドライブにスプレッドシートを2つ新規作成する関数
 async function createTwoSpreadsheets() {
     try {
-        document.getElementById('content').innerText = 'スプレッドシートを作成中...';
+        document.getElementById('content').innerHTML = '<p>スプレッドシートを作成中...</p>';
 
         // 1つ目のスプレッドシートを作成
         const response1 = await gapi.client.sheets.spreadsheets.create({
             resource: {
                 properties: {
-                    title: 'アプリ用データシート 1' // 好きな名前に変更可能
+                    title: 'アプリ用データシート 1'
                 }
             }
         });
@@ -87,21 +87,26 @@ async function createTwoSpreadsheets() {
         const response2 = await gapi.client.sheets.spreadsheets.create({
             resource: {
                 properties: {
-                    title: 'アプリ用データシート 2' // 好きな名に変更可能
+                    title: 'アプリ用データシート 2'
                 }
             }
         });
         const spreadsheetId2 = response2.result.spreadsheetId;
 
-        // 成功メッセージとIDを表示（必要に応じてlocalStorageなどに保存して使い回します）
+        // 成功メッセージを表示
         document.getElementById('content').innerText = 
             `スプレッドシートの作成に成功しました！\n\n` +
             `1つ目 ID: ${spreadsheetId1}\n` +
             `2つ目 ID: ${spreadsheetId2}`;
 
-        // ※ここで取得したIDを使って、書き込みや読み込みの処理へと進むことができます
+        // リンクをHTMLに挿入する
+        const linksDiv = document.getElementById('links');
+        linksDiv.innerHTML = `
+            <a href="https://docs.google.com/spreadsheets/d/${spreadsheetId1}/edit" target="_blank">📄 1つ目のスプレッドシートを開く</a>
+            <a href="https://docs.google.com/spreadsheets/d/${spreadsheetId2}/edit" target="_blank">📄 2つ目のスプレッドシートを開く</a>
+        `;
 
     } catch (err) {
-        document.getElementById('content').innerText = '作成エラー: ' + (err.message || err);
+        document.getElementById('content').innerHTML = '<p>作成エラー: ' + (err.message || err) + '</p>';
     }
 }
