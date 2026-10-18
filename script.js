@@ -134,7 +134,7 @@ async function createSpreadsheetInFolder(title, folderId) {
 
     const response = await gapi.client.drive.files.create({
         resource: resource,
-        fields: 'id, spreadsheetUrl'
+        fields: 'id, webViewLink' // ここを修正しました
     });
     return response.result.id;
 }
