@@ -1,16 +1,67 @@
-const num1Input = document.getElementById('num1');
-const num2Input = document.getElementById('num2');
-const calcBtn = document.getElementById('calc-btn');
-const resultDiv = document.getElementById('result');
+body {
+    font-family: sans-serif;
+    background-color: #f0f2f5;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 100vh;
+    margin: 0;
+}
 
-calcBtn.addEventListener('click', () => {
-    // 入力された値を数値に変換する
-    const val1 = Number(num1Input.value);
-    const val2 = Number(num2Input.value);
+.card {
+    background: white;
+    padding: 30px;
+    border-radius: 12px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+    text-align: center;
+    width: 300px;
+}
 
-    // 足し算を実行
-    const sum = val1 + val2;
+input {
+    width: 80px;
+    padding: 8px;
+    font-size: 18px;
+    text-align: center;
+    border: 1px solid #ccc;
+    border-radius: 6px;
+    margin: 5px;
+}
 
-    // 結果を表示する
-    resultDiv.textContent = `答え： ${sum}`;
-});
+button {
+    padding: 8px 16px;
+    font-size: 16px;
+    background-color: #0066ff;
+    color: white;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    margin-top: 10px;
+}
+
+button:hover {
+    background-color: #0052cc;
+}
+
+.hidden {
+    display: none;
+}
+
+.error {
+    color: red;
+    font-size: 14px;
+    margin-top: 10px;
+}
+
+.input-area {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+    justify-content: center;
+    margin-bottom: 20px;
+}
+
+#result {
+    font-size: 18px;
+    font-weight: bold;
+    color: #333;
+}
