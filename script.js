@@ -1,4 +1,74 @@
-// ログ用シート（シート1）の確認・作成と、新規データシートの作成＆記録を行うメイン関数
+// クライアントIDの設定（ここにあなたの取得したクライアントIDを貼り付けてください）
+const CLIENT_ID = '893360002885-juvu8vp11q6si42ebojo4i483vd3sqkl.apps.googleusercontent.com';
+
+const SCOPES = 'https://www.googleapis.com/auth/spreadsheets';
+const DISCOVERY_DOC = 'https://sheets.googleapis.com/$discovery/rest?version=v4';
+
+let tokenClient;
+let gapiInited = false;
+let ginisInited = false;
+
+function gapiLoaded() {
+    gapi.load('client', initializeGapiClient);
+}
+
+async function initializeGapiClient() {
+    await gapi.client.init({
+        discoveryDocs: [DISCOVERY_DOC],
+    });
+    gapiInited = true;
+    maybeEnableButtons();
+}
+
+function gisLoaded() {
+    tokenClient = google.accounts.oauth2.initTokenClient({
+        client_id: CLIENT_ID,
+        scope: SCOPES,
+        callback: '',
+    });
+    ginisInited = true;
+    maybeEnableButtons();
+}
+
+function maybeEnableButtons() {
+    if (gapiInited && ginisInited) {
+        document.getElementById('authorize_button').style.display = 'inline-block';
+    }
+}
+
+function handleAuthClick() {
+    tokenClient.callback = async (resp) => {
+        if (resp.error !== undefined) {
+            throw (resp);
+        }
+        document.getElementById('signout_button').style.display = 'inline-block';
+        document.getElementById('authorize_button').innerText = '再実行';
+        
+        // ログイン成功後のメイン処理を実行
+        await processLogAndNewSheet();
+    };
+
+    if (gapi.client.getToken() === null) {
+        tokenClient.requestAccessToken({prompt: 'consent'});
+    } else {
+        tokenClient.requestAccessToken({prompt: ''});
+    }
+}
+
+function handleSignoutClick() {
+    const token = gapi.client.getToken();
+    if (token !== null) {
+        google.accounts.oauth2.revoke(token.access_token, () => {
+            gapi.client.setToken('');
+            document.getElementById('content').innerHTML = '<p>ログアウトしました。「Googleでログインして処理を開始」ボタンから再度実行できます。</p>';
+            document.getElementById('links').innerHTML = '';
+            document.getElementById('signout_button').style.display = 'none';
+            document.getElementById('authorize_button').innerText = 'Googleでログインして処理を開始';
+        });
+    }
+}
+
+// ログ用シートの確認・作成と、新規データシートの作成＆記録を行うメイン関数
 async function processLogAndNewSheet() {
     try {
         document.getElementById('content').innerHTML = '<p>ログ用シートを確認・作成中...</p>';
