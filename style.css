@@ -46,11 +46,24 @@ button:hover {
     background-color: #a50e0e;
 }
 
-pre {
+.output-box {
     background: #f1f3f4;
     padding: 15px;
     border-radius: 4px;
     white-space: pre-wrap;
     word-wrap: break-word;
-    min-height: 100px;
+    min-height: 50px;
+    margin-bottom: 15px;
+}
+
+.links-box a {
+    display: block;
+    color: #1a73e8;
+    text-decoration: none;
+    margin-bottom: 8px;
+    font-weight: bold;
+}
+
+.links-box a:hover {
+    text-decoration: underline;
 }
