@@ -1,6 +1,6 @@
 // クライアントIDとGoogle Cloud Consoleのプロジェクト番号（APIキーとDeveloper Key）の設定
 const CLIENT_ID = '893360002885-juvu8vp11q6si42ebojo4i483vd3sqkl.apps.googleusercontent.com';
-const API_KEY = 'YOUR_API_KEY'; // Google Cloud Consoleで発行した「APIキー」を入れてください
+const API_KEY = 'AIzaSyDKcb8Ztk9C_zs5oTbNSAcSbXmyNyUEM8Q'; // Google Cloud Consoleで発行した「APIキー」を入れてください
 const APP_ID = 'YOUR_PROJECT_NUMBER'; // プロジェクト番号（数値）
 
 const SCOPES = 'https://www.googleapis.com/auth/spreadsheets https://www.googleapis.com/auth/drive.file';
