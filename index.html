@@ -9,17 +9,32 @@
 <body>
 
     <div class="container">
-        <h1>スプレッドシート ログ管理ツール</h1>
+        <h1>スプレッドシート ログ管理ツール（GUI版）</h1>
         
-        <!-- 操作ボタン -->
+        <!-- 認証ボタン -->
         <div class="button-group">
-            <button id="authorize_button" onclick="handleAuthClick()" style="display: none;">Googleでログインして処理を開始</button>
+            <button id="authorize_button" onclick="handleAuthClick()">Googleでログイン</button>
             <button id="signout_button" onclick="handleSignoutClick()" style="display: none;">ログアウト</button>
+        </div>
+
+        <!-- ログイン後に操作するフォーム（GUI） -->
+        <div id="app_section" style="display: none;" class="form-section">
+            <div class="input-group">
+                <label for="folder_id_input">保存先Googleドライブ フォルダID:</label>
+                <input type="text" id="folder_id_input" placeholder="例: 1a2b3c4D5e... (空欄ならマイドライブ直下)">
+                <button type="button" onclick="saveFolderId()">フォルダIDを保存</button>
+            </div>
+
+            <div class="input-group">
+                <label for="sheet_title_input">新しく作るシートの名前:</label>
+                <input type="text" id="sheet_title_input" value="カスタムデータシート">
+                <button type="button" class="primary-btn" onclick="createNewSheet()">シートを作成してログに記録</button>
+            </div>
         </div>
 
         <!-- 状態を表示するエリア -->
         <div id="content" class="output-box">
-            <p>「Googleでログインして処理を開始」ボタンを押してください。</p>
+            <p>「Googleでログイン」ボタンを押してください。</p>
         </div>
 
         <!-- 作成されたスプレッドシートを開くためのリンク表示エリア -->
