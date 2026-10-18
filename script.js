@@ -1,67 +1,29 @@
-body {
-    font-family: sans-serif;
-    background-color: #f0f2f5;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    height: 100vh;
-    margin: 0;
-}
+const passInput = document.getElementById('pass-input');
+const loginBtn = document.getElementById('login-btn');
+const errorMsg = document.getElementById('error-msg');
+const authScreen = document.getElementById('auth-screen');
+const appScreen = document.getElementById('app-screen');
 
-.card {
-    background: white;
-    padding: 30px;
-    border-radius: 12px;
-    box-shadow: 0 4px 12px rgba(0,0,0,0.1);
-    text-align: center;
-    width: 300px;
-}
+const num1Input = document.getElementById('num1');
+const num2Input = document.getElementById('num2');
+const calcBtn = document.getElementById('calc-btn');
+const resultDiv = document.getElementById('result');
 
-input {
-    width: 80px;
-    padding: 8px;
-    font-size: 18px;
-    text-align: center;
-    border: 1px solid #ccc;
-    border-radius: 6px;
-    margin: 5px;
-}
+// ログインボタンを押したときの処理
+loginBtn.addEventListener('click', () => {
+    if (passInput.value === '1202') {
+        // パスワードが合っていれば認証画面を消してアプリ画面を表示
+        authScreen.classList.add('hidden');
+        appScreen.classList.remove('hidden');
+    } else {
+        errorMsg.textContent = 'パスワードが違います';
+    }
+});
 
-button {
-    padding: 8px 16px;
-    font-size: 16px;
-    background-color: #0066ff;
-    color: white;
-    border: none;
-    border-radius: 6px;
-    cursor: pointer;
-    margin-top: 10px;
-}
-
-button:hover {
-    background-color: #0052cc;
-}
-
-.hidden {
-    display: none;
-}
-
-.error {
-    color: red;
-    font-size: 14px;
-    margin-top: 10px;
-}
-
-.input-area {
-    display: flex;
-    gap: 8px;
-    align-items: center;
-    justify-content: center;
-    margin-bottom: 20px;
-}
-
-#result {
-    font-size: 18px;
-    font-weight: bold;
-    color: #333;
-}
+// 足し算ボタンを押したときの処理
+calcBtn.addEventListener('click', () => {
+    const val1 = Number(num1Input.value);
+    const val2 = Number(num2Input.value);
+    const sum = val1 + val2;
+    resultDiv.textContent = `答え： ${sum}`;
+});
