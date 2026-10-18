@@ -1,67 +1,56 @@
 body {
-    font-family: sans-serif;
-    background-color: #f0f2f5;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    height: 100vh;
+    font-family: Arial, sans-serif;
+    background-color: #f4f6f9;
     margin: 0;
+    padding: 20px;
+    color: #333;
 }
 
-.card {
-    background: white;
+.container {
+    max-width: 600px;
+    margin: 40px auto;
+    background: #ffffff;
     padding: 30px;
-    border-radius: 12px;
-    box-shadow: 0 4px 12px rgba(0,0,0,0.1);
-    text-align: center;
-    width: 300px;
+    border-radius: 8px;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
 }
 
-input {
-    width: 80px;
-    padding: 8px;
-    font-size: 18px;
-    text-align: center;
-    border: 1px solid #ccc;
-    border-radius: 6px;
-    margin: 5px;
-}
-
-button {
-    padding: 8px 16px;
-    font-size: 16px;
-    background-color: #0066ff;
-    color: white;
-    border: none;
-    border-radius: 6px;
-    cursor: pointer;
-    margin-top: 10px;
-}
-
-button:hover {
-    background-color: #0052cc;
-}
-
-.hidden {
-    display: none;
-}
-
-.error {
-    color: red;
-    font-size: 14px;
-    margin-top: 10px;
-}
-
-.input-area {
-    display: flex;
-    gap: 8px;
-    align-items: center;
-    justify-content: center;
+h1 {
+    font-size: 1.5rem;
     margin-bottom: 20px;
 }
 
-#result {
-    font-size: 18px;
-    font-weight: bold;
-    color: #333;
+.button-group {
+    margin-bottom: 20px;
+}
+
+button {
+    background-color: #1a73e8;
+    color: white;
+    border: none;
+    padding: 10px 20px;
+    font-size: 14px;
+    border-radius: 4px;
+    cursor: pointer;
+}
+
+button:hover {
+    background-color: #1557b0;
+}
+
+#signout_button {
+    background-color: #d93025;
+}
+
+#signout_button:hover {
+    background-color: #a50e0e;
+}
+
+pre {
+    background: #f1f3f4;
+    padding: 15px;
+    border-radius: 4px;
+    white-space: pre-wrap;
+    word-wrap: break-word;
+    min-height: 100px;
 }
