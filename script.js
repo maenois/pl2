@@ -141,7 +141,12 @@ async function processLogAndNewSheet() {
             <a href="${newSheetUrl}" target="_blank">📄 新しく作った「${newSheetTitle}」を開く</a>
         `;
 
-    } catch (err) {
-        document.getElementById('content').innerHTML = '<p>エラーが発生しました: ' + (err.message || err) + '</p>';
+   } catch (err) {
+        // 詳細なエラーをコンソールに出力する
+        console.error('詳細エラーオブジェクト:', err);
+
+        // 画面にも分かりやすいエラーメッセージを出す
+        const errorMsg = err.result?.error?.message || err.message || JSON.stringify(err);
+        document.getElementById('content').innerHTML = '<p style="color: red;">エラーが発生しました: ' + errorMsg + '</p>';
     }
 }
