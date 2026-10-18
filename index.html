@@ -3,55 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <title>パスワード付き足し算アプリ</title>
-    <style>
-        body {
-            font-family: sans-serif;
-            background-color: #f0f2f5;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            height: 100vh;
-            margin: 0;
-        }
-        .card {
-            background: white;
-            padding: 30px;
-            border-radius: 12px;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
-            text-align: center;
-            width: 300px;
-        }
-        input {
-            width: 80px;
-            padding: 8px;
-            font-size: 18px;
-            text-align: center;
-            border: 1px solid #ccc;
-            border-radius: 6px;
-            margin: 5px;
-        }
-        button {
-            padding: 8px 16px;
-            font-size: 16px;
-            background-color: #0066ff;
-            color: white;
-            border: none;
-            border-radius: 6px;
-            cursor: pointer;
-            margin-top: 10px;
-        }
-        button:hover {
-            background-color: #0052cc;
-        }
-        .hidden {
-            display: none;
-        }
-        .error {
-            color: red;
-            font-size: 14px;
-            margin-top: 10px;
-        }
-    </style>
+    <link rel="stylesheet" href="style.css">
 </head>
 <body>
 
@@ -69,46 +21,16 @@
         <!-- 足し算アプリ画面（最初は隠れている） -->
         <div id="app-screen" class="hidden">
             <h1>かんたん足し算</h1>
-            <div style="display: flex; gap: 8px; align-items: center; justify-content: center; margin-bottom: 20px;">
+            <div class="input-area">
                 <input type="number" id="num1" placeholder="数字1">
                 <span>＋</span>
                 <input type="number" id="num2" placeholder="数字2">
                 <button id="calc-btn">＝</button>
             </div>
-            <div id="result" style="font-size: 18px; font-weight: bold; color: #333;">結果はここに表示されます</div>
+            <div id="result">結果はここに表示されます</div>
         </div>
     </div>
 
-    <script>
-        const passInput = document.getElementById('pass-input');
-        const loginBtn = document.getElementById('login-btn');
-        const errorMsg = document.getElementById('error-msg');
-        const authScreen = document.getElementById('auth-screen');
-        const appScreen = document.getElementById('app-screen');
-
-        const num1Input = document.getElementById('num1');
-        const num2Input = document.getElementById('num2');
-        const calcBtn = document.getElementById('calc-btn');
-        const resultDiv = document.getElementById('result');
-
-        // ログインボタンを押したときの処理
-        loginBtn.addEventListener('click', () => {
-            if (passInput.value === '1202') {
-                // パスワードが合っていれば認証画面を消してアプリ画面を表示
-                authScreen.classList.add('hidden');
-                appScreen.classList.remove('hidden');
-            } else {
-                errorMsg.textContent = 'パスワードが違います';
-            }
-        });
-
-        // 足し算ボタンを押したときの処理
-        calcBtn.addEventListener('click', () => {
-            const val1 = Number(num1Input.value);
-            const val2 = Number(num2Input.value);
-            const sum = val1 + val2;
-            resultDiv.textContent = `答え： ${sum}`;
-        });
-    </script>
+    <script src="script.js"></script>
 </body>
 </html>
