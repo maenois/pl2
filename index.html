@@ -3,13 +3,13 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Google Sheets ログ管理アプリ</title>
+    <title>Google Sheets ログ管理アプリ（フォルダ選択ピッカー対応）</title>
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
 
     <div class="container">
-        <h1>スプレッドシート ログ管理ツール（GUI版）</h1>
+        <h1>スプレッドシート ログ管理ツール</h1>
         
         <!-- 認証ボタン -->
         <div class="button-group">
@@ -17,12 +17,14 @@
             <button id="signout_button" onclick="handleSignoutClick()" style="display: none;">ログアウト</button>
         </div>
 
-        <!-- ログイン後に操作するフォーム（GUI） -->
+        <!-- ログイン後に操作するフォーム -->
         <div id="app_section" style="display: none;" class="form-section">
             <div class="input-group">
-                <label for="folder_id_input">保存先Googleドライブ フォルダID:</label>
-                <input type="text" id="folder_id_input" placeholder="例: 1a2b3c4D5e... (空欄ならマイドライブ直下)">
-                <button type="button" onclick="saveFolderId()">フォルダIDを保存</button>
+                <label>保存先フォルダ:</label>
+                <div class="folder-select-box">
+                    <span id="selected_folder_name">マイドライブ（直下）</span>
+                    <button type="button" onclick="openFolderPicker()">📁 フォルダを選ぶ</button>
+                </div>
             </div>
 
             <div class="input-group">
@@ -41,7 +43,7 @@
         <div id="links" class="links-box"></div>
     </div>
 
-    <!-- Google 認証 & API ライブラリの読み込み -->
+    <!-- Google 認証 & API & Picker ライブラリの読み込み -->
     <script async defer src="https://apis.google.com/js/api.js" onload="gapiLoaded()"></script>
     <script async defer src="https://accounts.google.com/gsi/client" onload="gisLoaded()"></script>
     
