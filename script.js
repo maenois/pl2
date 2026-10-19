@@ -1,5 +1,5 @@
 // ==========================================
-// 2. 設定エリア（ご自身の情報に書き換えてください）
+// 1. 設定エリア（ご自身の情報に書き換えてください）
 // ==========================================
 const CLIENT_ID = '893360002885-juvu8vp11q6si42ebojo4i483vd3sqkl.apps.googleusercontent.com';
 const API_KEY = 'AIzaSyDKcb8Ztk9C_zs5oTbNSAcSbXmyNyUEM8Q'; // Google Cloud Consoleで発行した「APIキー」を入れてください
@@ -146,7 +146,7 @@ async function createSpreadsheetInFolder(title, folderId) {
 }
 
 // ==========================================
-// 5. 新規シート作成 ＆ リンク巡回（名前自動更新 ＆ 削除済みシートの自動除外）のメイン処理
+// 5. 新規シート作成 ＆ IDベースの重複防止・名前変更の上書き同期・削除の自動除外
 // ==========================================
 async function createNewSheet() {
     try {
@@ -188,28 +188,38 @@ async function createNewSheet() {
         const header = rows.length > 0 ? rows[0] : ['シート名', 'スプレッドシートURL', '作成日時'];
         let dataRows = rows.length > 1 ? rows.slice(1) : [];
 
-        // 3. B列のリンクをすべて巡回チェック
-        let validDataRows = [];
+        // 3. スプレッドシートIDごとにユニークに管理するためのMap (重複を防ぎ、既存行を更新する)
+        let uniqueSheetMap = new Map();
+
+        // 4. 既存データを巡回してチェック
         for (let i = 0; i < dataRows.length; i++) {
-            const url = dataRows[i][1]; // B列（URL）
+            const row = dataRows[i];
+            const url = row[1]; // B列（URL）
             if (url) {
                 const match = url.match(/\/d\/([a-zA-Z0-9-_]+)/);
                 if (match && match[1]) {
                     const sheetId = match[1];
+
+                    // すでにこのIDがマップに登録されている場合はスキップ（二重登録を防ぐ）
+                    if (uniqueSheetMap.has(sheetId)) {
+                        continue;
+                    }
+
                     try {
-                        // ドライブからファイル情報を取得
+                        // ドライブから最新のファイル名と削除状態を取得
                         const fileResp = await gapi.client.drive.files.get({
                             fileId: sheetId,
                             fields: 'name, trashed'
                         });
 
-                        // ファイルが生きていて、ゴミ箱に入っていない場合のみ残す
+                        // ファイルが生きていて、ゴミ箱に入っていない場合のみ保持
                         if (fileResp && fileResp.result && !fileResp.result.trashed) {
-                            dataRows[i][0] = fileResp.result.name; // 最新の名前に更新
-                            validDataRows.push(dataRows[i]); // 生きているデータとして保持
+                            // 名前が変更されていたら最新の名称でA列を書き換える
+                            row[0] = fileResp.result.name; 
+                            uniqueSheetMap.set(sheetId, row);
                         }
                     } catch (e) {
-                        // 404エラーなどでファイルが見つからない（削除された）場合は validDataRows に入れない（＝サーバーのログからも消える）
+                        // 404等で削除されていた場合はマップに入れない（＝サーバーのログからも消える）
                         console.warn(`ID ${sheetId} は削除されたか見つからないためログから除外します`, e);
                     }
                 }
@@ -218,25 +228,35 @@ async function createNewSheet() {
 
         document.getElementById('content').innerHTML = `<p>「${newSheetTitle}」を作成中...</p>`;
 
-        // 4. 新しいカスタムシートを作成
+        // 5. 新しいカスタムシートを作成
         const newSheetId = await createSpreadsheetInFolder(newSheetTitle, targetFolderId);
         const newSheetUrl = `https://docs.google.com/spreadsheets/d/${newSheetId}/edit`;
 
-        // 新しいデータを一番上（先頭）に追加
-        validDataRows.unshift([newSheetTitle, newSheetUrl, new Date().toLocaleString()]);
+        // 新しく作ったシートのデータを作成
+        const newRow = [newSheetTitle, newSheetUrl, new Date().toLocaleString()];
+        
+        // マップの先頭（最新）に追加できるように、新しいものを一番上に配置して再構築
+        let finalRows = [newRow];
+        
+        // 既存のシートたちをマップから取り出して順番に繋げる（すでに新しく作ったものと同じIDが万が一あれば除外）
+        for (let [sheetId, row] of uniqueSheetMap) {
+            if (sheetId !== newSheetId) {
+                finalRows.push(row);
+            }
+        }
 
-        // 5. 更新・整理したデータをサーバースプシに書き戻す
+        // 6. 整理されたデータ（ヘッダー ＋ 最新が先頭・名前自動書換済み・重複なし・削除済み削除）を書き戻す
         await gapi.client.sheets.spreadsheets.values.update({
             spreadsheetId: logSheetId,
             range: `${logFirstSheetName}!A1`,
             valueInputOption: 'USER_ENTERED',
             resource: {
-                values: [header, ...validDataRows]
+                values: [header, ...finalRows]
             }
         });
 
         document.getElementById('content').innerText = 
-            `処理完了！\n削除されたシートの自動整理、名前の同期を行い、新しいシートを追加しました。`;
+            `処理完了！\n最新情報を同期し、新しいシートを追加しました。`;
 
         const linksDiv = document.getElementById('links');
         linksDiv.innerHTML = `
