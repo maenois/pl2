@@ -1,107 +1,127 @@
+/* 全体の基本設定 */
 body {
     font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
-    background-color: #f4f6f9;
+    background-color: #f4f7f6;
     color: #333;
     margin: 0;
-    padding: 40px;
+    padding: 20px;
     display: flex;
     justify-content: center;
+    align-items: center;
+    min-height: 100vh;
 }
 
+/* カード風のコンテナ */
 .container {
+    width: 100%;
+    max-width: 600px;
+}
+
+.card {
     background: #ffffff;
     padding: 30px;
     border-radius: 8px;
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-    width: 100%;
-    max-width: 500px;
-}
-
-h1 {
-    font-size: 20px;
     margin-bottom: 20px;
-    color: #1a73e8;
+    text-align: center;
 }
 
-.folder-box {
-    background: #f8f9fa;
-    padding: 12px;
-    border-radius: 6px;
-    margin-bottom: 20px;
-    border: 1px solid #dee2e6;
+/* 見出し */
+h2, h3 {
+    color: #2c3e50;
 }
 
-.input-group {
-    margin-bottom: 15px;
-}
-
-.input-group label {
-    display: block;
-    font-weight: bold;
-    margin-bottom: 5px;
-    font-size: 14px;
-}
-
-.input-group input[type="text"],
-.input-group input[type="password"] {
-    width: 100%;
-    padding: 8px 12px;
-    box-sizing: border-box;
+/* 入力フォームとボタンの共通スタイル */
+input[type="password"],
+input[type="text"] {
+    padding: 10px;
+    font-size: 16px;
     border: 1px solid #ccc;
     border-radius: 4px;
-    font-size: 14px;
-}
-
-.input-group small {
-    color: #666;
-    font-size: 12px;
+    margin-bottom: 15px;
+    box-sizing: border-box;
 }
 
 button {
-    padding: 8px 16px;
-    background-color: #f8f9fa;
-    border: 1px solid #ccc;
+    padding: 10px 20px;
+    font-size: 15px;
+    border: none;
     border-radius: 4px;
     cursor: pointer;
-    font-size: 14px;
+    background-color: #3498db;
+    color: white;
+    transition: opacity 0.2s;
 }
 
 button:hover {
-    background-color: #e2e6ea;
+    opacity: 0.9;
 }
 
-.primary-btn {
-    background-color: #1a73e8;
-    color: white;
-    border: none;
-    padding: 10px 20px;
-    font-weight: bold;
-    width: 100%;
+/* エラーメッセージ */
+.error-text {
+    color: #e74c3c;
+    font-size: 14px;
     margin-top: 10px;
 }
 
-.primary-btn:hover {
-    background-color: #1557b0;
+/* 認証・フォルダ選択エリアの装飾 */
+.auth-box {
+    background: #f9f9f9;
+    padding: 15px;
+    border-radius: 6px;
+    margin-bottom: 20px;
+    border: 1px solid #eaeaea;
 }
 
-#content {
-    margin-top: 20px;
+.folder-select-area {
+    margin-bottom: 15px;
+}
+
+#selected_folder_name {
+    display: block;
+    margin-top: 8px;
     font-size: 14px;
+    color: #666;
+    font-weight: bold;
 }
 
-#links {
-    margin-top: 15px;
+.login-actions {
     display: flex;
-    flex-direction: column;
-    gap: 8px;
+    justify-content: center;
+    gap: 10px;
 }
 
-#links a {
-    color: #1a73e8;
+.btn-google {
+    background-color: #4285F4;
+}
+
+.btn-danger {
+    background-color: #e74c3c;
+}
+
+/* 区切り線 */
+hr {
+    border: none;
+    border-top: 1px solid #eee;
+    margin: 20px 0;
+}
+
+/* リンク・ボタン表示エリア */
+.links-area {
+    margin-top: 20px;
+}
+
+.links-area a {
+    display: inline-block;
+    margin: 5px;
+    padding: 8px 15px;
+    background-color: #f1f2f6;
+    color: #2f3542;
     text-decoration: none;
-    font-size: 14px;
+    border-radius: 4px;
+    border: 1px solid #dfe4ea;
 }
 
-#links a:hover {
-    text-decoration: underline;
+.links-area a:hover {
+    background-color: #dfe4ea;
 }
