@@ -344,7 +344,7 @@ async function createNewSheet() {
             // 3〜23行目に指定された ARRAYFORMULA(SUMIF(...))
             let formulas = [];
             for (let r = 3; r <= 23; r++) {
-                formulas.push([`=ARRAYFORMULA(SUMIF('${sName}'!B:B, B${r}, '${sName}'!F:F))`]);
+                formulas.push([`=ARRAYFORMULA(SUMIF('${sName}'!B:B, SEQUENCE(21, 1, 11), '${sName}'!F:F))`]);
             }
             batchValueData.push({
                 range: `科目別合計!${colLetter}3:${colLetter}23`,
