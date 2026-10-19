@@ -1,5 +1,5 @@
 // ==========================================
-// 0. パスワード認証
+// 2. パスワード認証
 // ==========================================
 function checkPassword() {
     const inputVal = document.getElementById('password_input').value;
@@ -20,7 +20,6 @@ const CLIENT_ID = '893360002885-juvu8vp11q6si42ebojo4i483vd3sqkl.apps.googleuser
 const API_KEY = 'AIzaSyDKcb8Ztk9C_zs5oTbNSAcSbXmyNyUEM8Q'; // Google Cloud Consoleで発行した「APIキー」を入れてください
 const APP_ID = '893360002885'; // プロジェクト番号（数値）
 
-// 既存フォルダを一覧表示するため drive.readonly（または drive）スコープを追加
 const SCOPES = 'https://www.googleapis.com/auth/spreadsheets https://www.googleapis.com/auth/drive.file https://www.googleapis.com/auth/drive.readonly';
 const DISCOVERY_DOCS = [
     'https://sheets.googleapis.com/$discovery/rest?version=v4',
@@ -83,7 +82,6 @@ function onLoginSuccess() {
     document.getElementById('authorize_button').style.display = 'none';
     document.getElementById('app_section').style.display = 'block';
     
-    // ログイン成功時はメニュー画面を表示
     switchView('menu');
 }
 
@@ -115,7 +113,6 @@ function switchView(viewName) {
         document.getElementById('view_menu').style.display = 'block';
     } else if (viewName === 'spreadsheet') {
         document.getElementById('view_spreadsheet').style.display = 'block';
-        // スプレッドシート画面が開いたときにルートフォルダの一覧を読み込む
         loadFolderContent('root', 'マイドライブ');
     } else if (viewName === 'word') {
         document.getElementById('view_word').style.display = 'block';
@@ -145,7 +142,6 @@ async function loadFolderContent(folderId, folderName) {
                 const item = document.createElement('div');
                 item.className = 'folder-item';
                 item.innerHTML = `📁 ${folder.name}`;
-                // クリックでそのフォルダの中へ移動
                 item.onclick = () => {
                     currentFolderStack.push({ id: folder.id, name: folder.name });
                     updateBreadcrumb();
@@ -384,7 +380,9 @@ async function createNewSheet() {
             }
         });
 
-        // 「備品」シートの処理
+        // ----------------------------------------------------
+        // 「備品」シートのコピー ＆ 「備品」へのリネーム処理
+        // ----------------------------------------------------
         let bibinCopied = false;
         if (dataRows.length > 0 && dataRows[0][1]) {
             const prevUrl = dataRows[0][1];
@@ -402,13 +400,32 @@ async function createNewSheet() {
                         const prevBibinSheet = prevSpInfo.result.sheets.find(s => s.properties.title === '備品');
 
                         if (prevBibinSheet) {
-                            await gapi.client.sheets.spreadsheets.sheets.copyTo({
+                            // シートをコピー
+                            const copyRes = await gapi.client.sheets.spreadsheets.sheets.copyTo({
                                 spreadsheetId: prevSheetId,
                                 sheetId: prevBibinSheet.properties.sheetId,
                                 resource: {
                                     destinationSpreadsheetId: newSheetId
                                 }
                             });
+                            
+                            // コピーされると「備品のコピー」になるため、シートIDを指定して「備品」にリネーム
+                            const copiedSheetId = copyRes.result.sheetId;
+                            await gapi.client.sheets.spreadsheets.batchUpdate({
+                                spreadsheetId: newSheetId,
+                                resource: {
+                                    requests: [{
+                                        updateSheetProperties: {
+                                            properties: {
+                                                sheetId: copiedSheetId,
+                                                title: '備品'
+                                            },
+                                            fields: 'title'
+                                        }
+                                    }]
+                                }
+                            });
+
                             bibinCopied = true;
                             break;
                         }
@@ -419,6 +436,7 @@ async function createNewSheet() {
             }
         }
 
+        // 過去の備品シートが見つからなかった場合は新規作成
         if (!bibinCopied) {
             await gapi.client.sheets.spreadsheets.batchUpdate({
                 spreadsheetId: newSheetId,
@@ -450,6 +468,7 @@ async function createNewSheet() {
                 }
             });
         }
+        // ----------------------------------------------------
 
         let batchValueData = [];
 
@@ -599,25 +618,4 @@ async function createNewSheet() {
 async function createSpreadsheetInFolder(title, folderId) {
     const resource = {
         name: title,
-        mimeType: 'application/vnd.google-apps.spreadsheet'
-    };
-    if (folderId && folderId !== 'root' && folderId !== '') {
-        resource.parents = [folderId];
-    }
-
-    const response = await gapi.client.drive.files.create({
-        resource: resource,
-        fields: 'id, webViewLink'
-    });
-    return response.result.id;
-}
-
-function getColumnLetter(colIndex) {
-    let temp, letter = '';
-    while (colIndex > 0) {
-        temp = (colIndex - 1) % 26;
-        letter = String.fromCharCode(temp + 65) + letter;
-        colIndex = (colIndex - temp - 1) / 26;
-    }
-    return letter;
-}
+        mimeType: 'application/
