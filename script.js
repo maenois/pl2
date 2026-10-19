@@ -216,4 +216,323 @@ async function createNewSheet() {
         let uniqueSheetMap = new Map();
         for (let i = 0; i < dataRows.length; i++) {
             const row = dataRows[i];
-            const url = row
+            const url = row[1];
+            if (url) {
+                const match = url.match(/\/d\/([a-zA-Z0-9-_]+)/);
+                if (match && match[1]) {
+                    const sheetId = match[1];
+                    if (uniqueSheetMap.has(sheetId)) continue;
+
+                    try {
+                        const fileResp = await gapi.client.drive.files.get({
+                            fileId: sheetId,
+                            fields: 'name, trashed'
+                        });
+
+                        if (fileResp && fileResp.result && !fileResp.result.trashed) {
+                            row[0] = fileResp.result.name;
+                            uniqueSheetMap.set(sheetId, row);
+                        }
+                    } catch (e) {
+                        console.warn(`ID ${sheetId} は削除されたか見つからないためログから除外します`, e);
+                    }
+                }
+            }
+        }
+
+        document.getElementById('content').innerHTML = `<p>「${newSheetTitle}」および各種シートを作成中...</p>`;
+
+        const newSheetId = await createSpreadsheetInFolder(newSheetTitle, targetFolderId);
+        const newSheetUrl = `https://docs.google.com/spreadsheets/d/${newSheetId}/edit`;
+
+        const newSpInfo = await gapi.client.sheets.spreadsheets.get({ spreadsheetId: newSheetId });
+        const defaultSheetId = newSpInfo.result.sheets[0].properties.sheetId;
+
+        let requests = [{
+            updateSheetProperties: {
+                properties: {
+                    sheetId: defaultSheetId,
+                    title: '科目別合計'
+                },
+                fields: 'title'
+            }
+        }];
+
+        for (let i = 0; i < userSheetNames.length; i++) {
+            requests.push({
+                addSheet: {
+                    properties: {
+                        title: userSheetNames[i]
+                    }
+                }
+            });
+        }
+
+        const fixedSheets = ['活動', '活動実績・予定'];
+        for (let i = 0; i < fixedSheets.length; i++) {
+            requests.push({
+                addSheet: {
+                    properties: {
+                        title: fixedSheets[i]
+                    }
+                }
+            });
+        }
+
+        await gapi.client.sheets.spreadsheets.batchUpdate({
+            spreadsheetId: newSheetId,
+            resource: { requests: requests }
+        });
+
+        let userSheetsBatchData = [];
+        for (let i = 0; i < userSheetNames.length; i++) {
+            const sName = userSheetNames[i];
+
+            userSheetsBatchData.push({
+                range: `${sName}!A1:H1`,
+                values: [['物品名', '科目コード', '科目名', '単価', '個数', '合計金額', '備考', '予算資料に書く説明']]
+            });
+
+            userSheetsBatchData.push({
+                range: `${sName}!C2`,
+                values: [[`=ARRAYFORMULA(IFERROR(VLOOKUP(B2:B, '科目別合計'!$B$3:$C$23, 2, FALSE), ""))`]]
+            });
+
+            userSheetsBatchData.push({
+                range: `${sName}!F2`,
+                values: [[`=ARRAYFORMULA(IF((D2:D="")+(E2:E=""), "", D2:D * IF(E2:E="一式", 1, E2:E)))`]]
+            });
+        }
+
+        let activityValues = [['部会紹介']];
+        for (let i = 0; i < userSheetNames.length; i++) {
+            activityValues.push([userSheetNames[i]]);
+        }
+        userSheetsBatchData.push({
+            range: '活動!A1:A' + activityValues.length,
+            values: activityValues
+        });
+
+        const gradeStartRow = activityValues.length + 2;
+        userSheetsBatchData.push({
+            range: `活動!A${gradeStartRow}`,
+            values: [['学年ごとの現在の活動部員']]
+        });
+
+        let gradeValues = [];
+        for (let g = 1; g <= 4; g++) {
+            gradeValues.push([`${g}年`, 0]);
+        }
+        userSheetsBatchData.push({
+            range: `活動!A${gradeStartRow + 1}:B${gradeStartRow + 4}`,
+            values: gradeValues
+        });
+
+        const monthsA = [12, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11];
+        let monthValuesA = monthsA.map(m => [`${m}月`]);
+        userSheetsBatchData.push({
+            range: '活動実績・予定!A2:A13',
+            values: monthValuesA
+        });
+
+        const monthsC = [4, 5, 6, 7, 8, 9, 10, 11, 12, 1, 2, 3];
+        let monthValuesC = monthsC.map(m => [`${m}月`]);
+        userSheetsBatchData.push({
+            range: '活動実績・予定!C2:C13',
+            values: monthValuesC
+        });
+
+        await gapi.client.sheets.spreadsheets.values.batchUpdate({
+            spreadsheetId: newSheetId,
+            resource: {
+                valueInputOption: 'USER_ENTERED',
+                data: userSheetsBatchData
+            }
+        });
+
+        let bibinCopied = false;
+        if (dataRows.length > 0 && dataRows[0][1]) {
+            const prevUrl = dataRows[0][1];
+            const match = prevUrl.match(/\/d\/([a-zA-Z0-9-_]+)/);
+            if (match && match[1]) {
+                const prevSheetId = match[1];
+                try {
+                    const prevSpInfo = await gapi.client.sheets.spreadsheets.get({ spreadsheetId: prevSheetId });
+                    const prevBibinSheet = prevSpInfo.result.sheets.find(s => s.properties.title === '備品');
+
+                    if (prevBibinSheet) {
+                        await gapi.client.sheets.spreadsheets.sheets.copyTo({
+                            spreadsheetId: prevSheetId,
+                            sheetId: prevBibinSheet.properties.sheetId,
+                            resource: {
+                                destinationSpreadsheetId: newSheetId
+                            }
+                        });
+                        bibinCopied = true;
+                    }
+                } catch (e) {
+                    console.warn('過去の備品シートのコピーに失敗したため、新規作成します', e);
+                }
+            }
+        }
+
+        if (!bibinCopied) {
+            await gapi.client.sheets.spreadsheets.batchUpdate({
+                spreadsheetId: newSheetId,
+                resource: {
+                    requests: [{
+                        addSheet: {
+                            properties: { title: '備品' }
+                        }
+                    }]
+                }
+            });
+
+            await gapi.client.sheets.spreadsheets.values.update({
+                spreadsheetId: newSheetId,
+                range: '備品!A1:E1',
+                valueInputOption: 'USER_ENTERED',
+                resource: {
+                    values: [['取得年', '備品名', '製造所', '仕様形式', '備考']]
+                }
+            });
+        }
+
+        let batchValueData = [];
+
+        let bValues = [];
+        for (let n = 11; n <= 31; n++) {
+            bValues.push([n]);
+        }
+        batchValueData.push({
+            range: '科目別合計!B3:B23',
+            values: bValues
+        });
+
+        const subjects = [
+            '科目一覧', 'ゼミナール・研究発表費', '講演会費', '試合・大会費', '連盟費', 
+            '合宿費', '新聞・図書費', '機関紙発行費', '調査費', '会議費', 
+            '印刷・記録費', '事務用消耗品費', '消耗品費', '通信・運輸費', '渉外費', 
+            '借用料', '器具・用具・備品費', '修理費', '薬品医療費', '保険料', '燃料費', '手数料'
+        ];
+        
+        let fullCValues = [];
+        fullCValues.push([subjects[0]]);
+        for (let i = 1; i < subjects.length; i++) {
+            fullCValues.push([subjects[i]]);
+        }
+        fullCValues.push(['']);
+        fullCValues.push(['合計']);
+
+        batchValueData.push({
+            range: '科目別合計!C2:C25',
+            values: fullCValues
+        });
+
+        for (let i = 0; i < userSheetNames.length; i++) {
+            const sName = userSheetNames[i];
+            const currentCol = 4 + i;
+            const colLetter = getColumnLetter(currentCol);
+
+            batchValueData.push({
+                range: `科目別合計!${colLetter}2`,
+                values: [[sName]]
+            });
+
+            batchValueData.push({
+                range: `科目別合計!${colLetter}3`,
+                values: [[`=ARRAYFORMULA(SUMIF('${sName}'!B:B, SEQUENCE(21, 1, 11), '${sName}'!F:F))`]]
+            });
+
+            batchValueData.push({
+                range: `科目別合計!${colLetter}25`,
+                values: [[`=SUM(${colLetter}3:${colLetter}23)`]]
+            });
+        }
+
+        const lastUserCol = 4 + userSheetNames.length - 1;
+        const skippedCol = lastUserCol + 2;
+        const skippedColLetter = getColumnLetter(skippedCol);
+        const nextColLetter = getColumnLetter(skippedCol + 1);
+
+        batchValueData.push({
+            range: `科目別合計!${skippedColLetter}2`,
+            values: [['合計']]
+        });
+        batchValueData.push({
+            range: `科目別合計!${nextColLetter}2`,
+            values: [['科目一覧']]
+        });
+
+        let rowSumFormulas = [];
+        let nextColSubjects = [];
+        for (let r = 3; r <= 23; r++) {
+            const startL = 'D';
+            const endL = getColumnLetter(lastUserCol);
+            rowSumFormulas.push([`=SUM(${startL}${r}:${endL}${r})`]);
+            nextColSubjects.push([fullCValues[r-2][0]]);
+        }
+
+        batchValueData.push({
+            range: `科目別合計!${skippedColLetter}3:${skippedColLetter}23`,
+            values: rowSumFormulas
+        });
+        batchValueData.push({
+            range: `科目別合計!${skippedColLetter}25`,
+            values: [[`=SUM(${skippedColLetter}3:${skippedColLetter}23)`]]
+        });
+
+        batchValueData.push({
+            range: `科目別合計!${nextColLetter}3:${nextColLetter}23`,
+            values: nextColSubjects
+        });
+        batchValueData.push({
+            range: `科目別合計!${nextColLetter}25`,
+            values: [['合計']]
+        });
+
+        await gapi.client.sheets.spreadsheets.values.batchUpdate({
+            spreadsheetId: newSheetId,
+            resource: {
+                valueInputOption: 'USER_ENTERED',
+                data: batchValueData
+            }
+        });
+
+        const newRow = [newSheetTitle, newSheetUrl, new Date().toLocaleString()];
+        let finalRows = [newRow];
+        
+        for (let [sheetId, row] of uniqueSheetMap) {
+            if (sheetId !== newSheetId) {
+                finalRows.push(row);
+            }
+        }
+
+        await gapi.client.sheets.spreadsheets.values.update({
+            spreadsheetId: logSheetId,
+            range: `${logFirstSheetName}!A1`,
+            valueInputOption: 'USER_ENTERED',
+            resource: {
+                values: [header, ...finalRows]
+            }
+        });
+
+        document.getElementById('content').innerText = 
+            `処理完了！\nすべてのシート（科目別合計・活動・活動実績・予定・備品など）の構築が完了しました。`;
+
+        const linksDiv = document.getElementById('links');
+        linksDiv.innerHTML = `
+            <a href="https://docs.google.com/spreadsheets/d/${logSheetId}/edit" target="_blank">📊 ログ管理シートを開く</a>
+            <a href="${newSheetUrl}" target="_blank">📄 新しく作った「${newSheetTitle}」を開く</a>
+        `;
+
+    } catch (err) {
+        let errorDetails = '';
+        try {
+            errorDetails = JSON.stringify(err, null, 2);
+        } catch (e) {
+            errorDetails = err.message || String(err);
+        }
+        document.getElementById('content').innerHTML = `<pre style="color: red; text-align: left; font-size: 12px; background: #fff; padding: 10px; border: 1px solid #ccc;">エラーが発生しました:\n${errorDetails}</pre>`;
+    }
+}
