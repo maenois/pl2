@@ -269,6 +269,47 @@ async function createNewSheet() {
             spreadsheetId: newSheetId,
             resource: { requests: requests }
         });
+        await gapi.client.sheets.spreadsheets.batchUpdate({
+            spreadsheetId: newSheetId,
+            resource: { requests: requests }
+        });
+
+        // ==========================================
+        // 【ここから追加】ユーザーが指定した各シートの1行目と数式（C列・F列）を設定
+        // ==========================================
+        let userSheetsBatchData = [];
+
+        for (let i = 0; i < userSheetNames.length; i++) {
+            const sName = userSheetNames[i];
+
+            // 1行目にA〜Hの見出しを記入
+            userSheetsBatchData.push({
+                range: `${sName}!A1:H1`,
+                values: [['物品名', '科目コード', '科目名', '単価', '個数', '合計金額', '備考', '予算資料に書く説明']]
+            });
+
+            // C2に科目名を自動取得するARRAYFORMULA数式
+            userSheetsBatchData.push({
+                range: `${sName}!C2`,
+                values: [[`=ARRAYFORMULA(IFERROR(VLOOKUP(B2:B, '科目別合計'!$B$3:$C$23, 2, FALSE), ""))`]]
+            });
+
+            // F2に金額を自動計算するARRAYFORMULA数式
+            userSheetsBatchData.push({
+                range: `${sName}!F2`,
+                values: [[`=ARRAYFORMULA(IF((D2:D="")+(E2:E=""), "", D2:D * IF(E2:E="一式", 1, E2:E)))`]]
+            });
+        }
+
+        // 各ユーザーシートの設定をまとめて書き込む
+        await gapi.client.sheets.spreadsheets.values.batchUpdate({
+            spreadsheetId: newSheetId,
+            resource: {
+                valueInputOption: 'USER_ENTERED',
+                data: userSheetsBatchData
+            }
+        });
+        // ==========================================【ここまで追加】
 
         // 5. 「科目別合計」シートにデータを流し込むためのデータ配列を準備
         // B3:B23 に 11〜31 を格納
