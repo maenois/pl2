@@ -2,52 +2,53 @@
 <html lang="ja">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Google Sheets ログ管理アプリ（フォルダ選択ピッカー対応）</title>
+    <title>スプレッドシート自動生成アプリ</title>
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
 
     <div class="container">
-        <h1>スプレッドシート ログ管理ツール</h1>
-        
-        <!-- 認証ボタン -->
-        <div class="button-group">
-            <button id="authorize_button" onclick="handleAuthClick()">Googleでログイン</button>
+        <h1>スプレッドシート自動作成ツール</h1>
+
+        <!-- ログイン・ログアウトボタン -->
+        <div id="auth_section">
+            <button id="authorize_button" onclick="handleAuthClick()" style="display: none;">Googleアカウントでログイン</button>
             <button id="signout_button" onclick="handleSignoutClick()" style="display: none;">ログアウト</button>
         </div>
 
-        <!-- ログイン後に操作するフォーム -->
-        <div id="app_section" style="display: none;" class="form-section">
-            <div class="input-group">
-                <label>保存先フォルダ:</label>
-                <div class="folder-select-box">
-                    <span id="selected_folder_name">マイドライブ（直下）</span>
-                    <button type="button" onclick="openFolderPicker()">📁 フォルダを選ぶ</button>
-                </div>
+        <!-- ログイン後に表示されるメイン操作エリア -->
+        <div id="app_section" style="display: none;">
+            <div class="folder-box">
+                <p>保存先フォルダ: <span id="selected_folder_name">未選択</span></p>
+                <button onclick="openFolderPicker()">フォルダを変更</button>
             </div>
 
             <div class="input-group">
-                <label for="sheet_title_input">新しく作るシートの名前:</label>
-                <input type="text" id="sheet_title_input" value="カスタムデータシート">
-                <button type="button" class="primary-btn" onclick="createNewSheet()">シートを作成してログに記録</button>
+                <label for="sheet_title_input">スプレッドシート自体の名前:</label>
+                <input type="text" id="sheet_title_input" value="マイカスタムデータ">
             </div>
-        </div>
 
-        <!-- 状態を表示するエリア -->
-        <div id="content" class="output-box">
-            <p>「Googleでログイン」ボタンを押してください。</p>
-        </div>
+            <div class="input-group">
+                <label for="sheet_names_input">作るシート（タブ）の名前（カンマ区切り）:</label>
+                <input type="text" id="sheet_names_input" value="集計用, データA, データB">
+                <small>例: 集計用, データA, データB と入力すると3つのタブが同時に作られます</small>
+            </div>
 
-        <!-- 作成されたスプレッドシートを開くためのリンク表示エリア -->
-        <div id="links" class="links-box"></div>
+            <button class="primary-btn" onclick="createNewSheet()">スプレッドシートを作成</button>
+
+            <!-- 処理状況やメッセージが表示される場所 -->
+            <div id="content"></div>
+
+            <!-- 作成したシートへのリンクが表示される場所 -->
+            <div id="links"></div>
+        </div>
     </div>
 
-    <!-- Google 認証 & API & Picker ライブラリの読み込み -->
+    <!-- Google APIの読み込み -->
     <script async defer src="https://apis.google.com/js/api.js" onload="gapiLoaded()"></script>
     <script async defer src="https://accounts.google.com/gsi/client" onload="gisLoaded()"></script>
     
-    <!-- JavaScript本体 -->
+    <!-- 先ほど作った script.js を読み込む -->
     <script src="script.js"></script>
 </body>
 </html>
