@@ -1,5 +1,5 @@
 // ==========================================
-// 2. 設定エリア（ご自身の情報に書き換えてください）
+// 1. 設定エリア（ご自身の情報に書き換えてください）
 // ==========================================
 const CLIENT_ID = '893360002885-juvu8vp11q6si42ebojo4i483vd3sqkl.apps.googleusercontent.com';
 const API_KEY = 'AIzaSyDKcb8Ztk9C_zs5oTbNSAcSbXmyNyUEM8Q'; // Google Cloud Consoleで発行した「APIキー」を入れてください
@@ -126,7 +126,7 @@ function pickerCallback(data) {
 }
 
 // ==========================================
-// 4. スプレッドシート作成ヘルパー
+// 4. スプレッドシート作成ヘルパー ＆ 変換関数
 // ==========================================
 async function createSpreadsheetInFolder(title, folderId) {
     const resource = {
@@ -144,9 +144,6 @@ async function createSpreadsheetInFolder(title, folderId) {
     return response.result.id;
 }
 
-// ==========================================
-// 5. 列番号をアルファベットに変換する便利関数（例: 4 -> 'D', 5 -> 'E'）
-// ==========================================
 function getColumnLetter(colIndex) {
     let temp, letter = '';
     while (colIndex > 0) {
@@ -158,16 +155,16 @@ function getColumnLetter(colIndex) {
 }
 
 // ==========================================
-// 6. 新規シート作成 ＆ 「科目別合計」構築・複数タブ設定・ログ管理のメイン処理
+// 5. 新規シート作成 ＆ 完全自動構築メイン処理
 // ==========================================
 async function createNewSheet() {
     try {
         const targetFolderId = localStorage.getItem('app_target_folder_id') || '';
         const newSheetTitle = document.getElementById('sheet_title_input').value.trim() || 'カスタムデータシート';
         
-        // ユーザーが入力した各シート名（カンマ区切り）
+        // ユーザーが入力した各シート名を取得（重複防止のため「科目別合計」は除外）
         const rawSheetNames = document.getElementById('sheet_names_input') ? document.getElementById('sheet_names_input').value.trim() : '';
-        const userSheetNames = rawSheetNames ? rawSheetNames.split(',').map(name => name.trim()).filter(name => name !== '') : ['シート1'];
+        const userSheetNames = rawSheetNames ? rawSheetNames.split(',').map(name => name.trim()).filter(name => name !== '' && name !== '科目別合計') : ['集計用'];
 
         document.getElementById('content').innerHTML = '<p>既存のシート状態を確認・同期中...</p>';
 
@@ -231,20 +228,17 @@ async function createNewSheet() {
             }
         }
 
-        document.getElementById('content').innerHTML = `<p>「${newSheetTitle}」と「科目別合計」シートを作成中...</p>`;
+        document.getElementById('content').innerHTML = `<p>「${newSheetTitle}」および「科目別合計」を作成中...</p>`;
 
         // 3. 新規スプレッドシートを作成
         const newSheetId = await createSpreadsheetInFolder(newSheetTitle, targetFolderId);
         const newSheetUrl = `https://docs.google.com/spreadsheets/d/${newSheetId}/edit`;
 
-        // 4. シート構成の組み立て（先頭に「科目別合計」を置き、その後にユーザー指定のシート群を配置）
+        // 4. 先頭に「科目別合計」を作り、その後にユーザー指定のシートを追加
         const newSpInfo = await gapi.client.sheets.spreadsheets.get({ spreadsheetId: newSheetId });
         const defaultSheetId = newSpInfo.result.sheets[0].properties.sheetId;
 
-        let requests = [];
-
-        // 最初のデフォルトシートを「科目別合計」にリネーム
-        requests.push({
+        let requests = [{
             updateSheetProperties: {
                 properties: {
                     sheetId: defaultSheetId,
@@ -252,9 +246,8 @@ async function createNewSheet() {
                 },
                 fields: 'title'
             }
-        });
+        }];
 
-        // ユーザーが指定した各シートを追加
         for (let i = 0; i < userSheetNames.length; i++) {
             requests.push({
                 addSheet: {
@@ -269,39 +262,31 @@ async function createNewSheet() {
             spreadsheetId: newSheetId,
             resource: { requests: requests }
         });
-        await gapi.client.sheets.spreadsheets.batchUpdate({
-            spreadsheetId: newSheetId,
-            resource: { requests: requests }
-        });
 
-        // ==========================================
-        // 【ここから追加】ユーザーが指定した各シートの1行目と数式（C列・F列）を設定
-        // ==========================================
+        // 5. ユーザー指定の各シート（A〜H見出し、C列・F列の数式）を設定
         let userSheetsBatchData = [];
-
         for (let i = 0; i < userSheetNames.length; i++) {
             const sName = userSheetNames[i];
 
-            // 1行目にA〜Hの見出しを記入
+            // A1〜H1に見出し
             userSheetsBatchData.push({
                 range: `${sName}!A1:H1`,
                 values: [['物品名', '科目コード', '科目名', '単価', '個数', '合計金額', '備考', '予算資料に書く説明']]
             });
 
-            // C2に科目名を自動取得するARRAYFORMULA数式
+            // C2にVLOOKUP数式
             userSheetsBatchData.push({
                 range: `${sName}!C2`,
                 values: [[`=ARRAYFORMULA(IFERROR(VLOOKUP(B2:B, '科目別合計'!$B$3:$C$23, 2, FALSE), ""))`]]
             });
 
-            // F2に金額を自動計算するARRAYFORMULA数式
+            // F2に計算式
             userSheetsBatchData.push({
                 range: `${sName}!F2`,
                 values: [[`=ARRAYFORMULA(IF((D2:D="")+(E2:E=""), "", D2:D * IF(E2:E="一式", 1, E2:E)))`]]
             });
         }
 
-        // 各ユーザーシートの設定をまとめて書き込む
         await gapi.client.sheets.spreadsheets.values.batchUpdate({
             spreadsheetId: newSheetId,
             resource: {
@@ -309,16 +294,21 @@ async function createNewSheet() {
                 data: userSheetsBatchData
             }
         });
-        // ==========================================【ここまで追加】
 
-        // 5. 「科目別合計」シートにデータを流し込むためのデータ配列を準備
-        // B3:B23 に 11〜31 を格納
+        // 6. 「科目別合計」シートの構築
+        let batchValueData = [];
+
+        // B3:B23 に 11〜31
         let bValues = [];
         for (let n = 11; n <= 31; n++) {
             bValues.push([n]);
         }
+        batchValueData.push({
+            range: '科目別合計!B3:B23',
+            values: bValues
+        });
 
-        // C2:C23 に科目一覧（＋25行目に「合計」）を格納
+        // C2:C25 に科目一覧と合計
         const subjects = [
             '科目一覧', 'ゼミナール・研究発表費', '講演会費', '試合・大会費', '連盟費', 
             '合宿費', '新聞・図書費', '機関紙発行費', '調査費', '会議費', 
@@ -326,82 +316,54 @@ async function createNewSheet() {
             '借用料', '器具・用具・備品費', '修理費', '薬品医療費', '保険料', '燃料費', '手数料'
         ];
         
-        let cValues = [];
-        for (let i = 0; i < subjects.length; i++) {
-            cValues.push([subjects[i]]);
-        }
-        // 25行目（インデックス24、配列上の行合わせ）に「合計」
-        // ※2行目からスタートして23行分が科目、25行目が合計になるように調整
         let fullCValues = [];
-        fullCValues.push([subjects[0]]); // C2: 科目一覧
-        for(let i=1; i<subjects.length; i++) {
-            fullCValues.push([subjects[i]]); // C3〜C23
+        fullCValues.push([subjects[0]]);
+        for (let i = 1; i < subjects.length; i++) {
+            fullCValues.push([subjects[i]]);
         }
-        fullCValues.push(['']); // C24
-        fullCValues.push(['合計']); // C25
+        fullCValues.push(['']);
+        fullCValues.push(['合計']);
 
-        // データ書き込み：B3:B23
-        await gapi.client.sheets.spreadsheets.values.update({
-            spreadsheetId: newSheetId,
-            range: '科目別合計!B3:B23',
-            valueInputOption: 'USER_ENTERED',
-            resource: { values: bValues }
-        });
-
-        // データ書き込み：C2:C25
-        await gapi.client.sheets.spreadsheets.values.update({
-            spreadsheetId: newSheetId,
+        batchValueData.push({
             range: '科目別合計!C2:C25',
-            valueInputOption: 'USER_ENTERED',
-            resource: { values: fullCValues }
+            values: fullCValues
         });
 
-        // 6. D列以降に各シートごとの集計式や、1列空けたパターンの数式を構築して書き込む
-        // 列の配置計算：
-        // ユーザーシートが N個 ある場合、
-        // 0番目 -> D列 (col 4)
-        // 1番目 -> E列 (col 5)
-        // ...
-        // 最後に1列空けて、その隣に合計列とCと同じ科目一覧を配置するなどのルールに対応
-        
-        let batchValueData = [];
-
+        // D列以降に各シートごとの数式やSUM関数を配置
         for (let i = 0; i < userSheetNames.length; i++) {
             const sName = userSheetNames[i];
             const currentCol = 4 + i; // D列 = 4
             const colLetter = getColumnLetter(currentCol);
 
-            // 2行目にシート名
+            // 2行目に見出し（シート名）
             batchValueData.push({
                 range: `科目別合計!${colLetter}2`,
                 values: [[sName]]
             });
 
-            // 3〜23行目に ARRAYFORMULA(SUMIF(...))
+            // 3〜23行目に指定された ARRAYFORMULA(SUMIF(...))
             let formulas = [];
             for (let r = 3; r <= 23; r++) {
-                // B列の対応する値（11〜31）を参照する数式
-                formulas.push([`=ARRAYFORMULA(SUMIF('${sName}'!B:B, SEQUENCE(21, 1, 11), '${sName}'!F:F))`]);
+                formulas.push([`=ARRAYFORMULA(SUMIF('${sName}'!B:B, B${r}, '${sName}'!F:F))`]);
             }
             batchValueData.push({
                 range: `科目別合計!${colLetter}3:${colLetter}23`,
                 values: formulas
             });
 
-            // 25行目に SUM関数 (3〜23の合計)
+            // 25行目に縦のSUM関数
             batchValueData.push({
                 range: `科目別合計!${colLetter}25`,
                 values: [[`=SUM(${colLetter}3:${colLetter}23)`]]
             });
         }
 
-        // シート数に応じた「1つ飛んで(空白列を挟んで)各行の合計を記入し、その隣にCと同じものを記入」の処理
-        const lastUserCol = 4 + userSheetNames.length - 1; // 最後のユーザーシートの列
-        const skippedCol = lastUserCol + 2; // 1列空けて次の列
+        // シート数から1列空けて、各行の合計列と科目一覧を配置
+        const lastUserCol = 4 + userSheetNames.length - 1;
+        const skippedCol = lastUserCol + 2;
         const skippedColLetter = getColumnLetter(skippedCol);
         const nextColLetter = getColumnLetter(skippedCol + 1);
 
-        // 2行目見出し「合計」など
         batchValueData.push({
             range: `科目別合計!${skippedColLetter}2`,
             values: [['合計']]
@@ -411,15 +373,13 @@ async function createNewSheet() {
             values: [['科目一覧']]
         });
 
-        // スキップ列の3〜23行目に、各行（D列〜最後のシート列まで）の横方向の合計を入れる
-        // スキップ列の25行目には縦の合計、隣（nextColLetter）のCと同じ科目一覧データを流し込む
         let rowSumFormulas = [];
         let nextColSubjects = [];
         for (let r = 3; r <= 23; r++) {
             const startL = 'D';
             const endL = getColumnLetter(lastUserCol);
             rowSumFormulas.push([`=SUM(${startL}${r}:${endL}${r})`]);
-            nextColSubjects.push([fullCValues[r-2][0]]); // 同じ科目名
+            nextColSubjects.push([fullCValues[r-2][0]]);
         }
 
         batchValueData.push({
@@ -431,7 +391,6 @@ async function createNewSheet() {
             values: [[`=SUM(${skippedColLetter}3:${skippedColLetter}23)`]]
         });
 
-        // 隣の列（Cと同じ科目一覧構造）
         batchValueData.push({
             range: `科目別合計!${nextColLetter}3:${nextColLetter}23`,
             values: nextColSubjects
@@ -450,7 +409,7 @@ async function createNewSheet() {
             }
         });
 
-        // 7. ログ管理シートへの登録・更新処理
+        // 7. ログ管理シートへの登録・更新処理（重複なし・名前同期・削除自動除外）
         const newRow = [newSheetTitle, newSheetUrl, new Date().toLocaleString()];
         let finalRows = [newRow];
         
@@ -470,7 +429,7 @@ async function createNewSheet() {
         });
 
         document.getElementById('content').innerText = 
-            `処理完了！\n先頭に「科目別合計」シートを作成し、指定された数式や科目一覧、合計列の自動配置を行いました。`;
+            `処理完了！\n「科目別合計」および指定されたすべてのシートと数式・合計列の構築が完了しました。`;
 
         const linksDiv = document.getElementById('links');
         linksDiv.innerHTML = `
