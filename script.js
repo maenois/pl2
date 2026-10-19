@@ -1,5 +1,5 @@
 // ==========================================
-// 0. パスワード認証
+// 1. パスワード認証
 // ==========================================
 function checkPassword() {
     const inputVal = document.getElementById('password_input').value;
@@ -240,7 +240,7 @@ async function createNewSheet() {
             }
         }
 
-        document.getElementById('content').innerHTML = `<p>「${newSheetTitle}」および「科目別合計」を作成中...</p>`;
+        document.getElementById('content').innerHTML = `<p>「${newSheetTitle}」および各種シートを作成中...</p>`;
 
         const newSheetId = await createSpreadsheetInFolder(newSheetTitle, targetFolderId);
         const newSheetUrl = `https://docs.google.com/spreadsheets/d/${newSheetId}/edit`;
@@ -248,6 +248,7 @@ async function createNewSheet() {
         const newSpInfo = await gapi.client.sheets.spreadsheets.get({ spreadsheetId: newSheetId });
         const defaultSheetId = newSpInfo.result.sheets[0].properties.sheetId;
 
+        // 4. 「科目別合計」を作り、ユーザー指定シート、さらに「活動」「活動実績・予定」「備品」を追加
         let requests = [{
             updateSheetProperties: {
                 properties: {
@@ -268,11 +269,24 @@ async function createNewSheet() {
             });
         }
 
+        // 追加の固定シート
+        const fixedSheets = ['活動', '活動実績・予定', '備品'];
+        for (let i = 0; i < fixedSheets.length; i++) {
+            requests.push({
+                addSheet: {
+                    properties: {
+                        title: fixedSheets[i]
+                    }
+                }
+            });
+        }
+
         await gapi.client.sheets.spreadsheets.batchUpdate({
             spreadsheetId: newSheetId,
             resource: { requests: requests }
         });
 
+        // 5. ユーザー指定の各シート（A〜H見出し、C列・F列の数式）を設定
         let userSheetsBatchData = [];
         for (let i = 0; i < userSheetNames.length; i++) {
             const sName = userSheetNames[i];
@@ -293,6 +307,62 @@ async function createNewSheet() {
             });
         }
 
+        // 6. 「活動」シートの構築
+        // A1に「部会紹介」、A2以降に各シート名を縦に記入
+        let activityValues = [['部会紹介']];
+        for (let i = 0; i < userSheetNames.length; i++) {
+            activityValues.push([userSheetNames[i]]);
+        }
+        userSheetsBatchData.push({
+            range: '活動!A1:A' + activityValues.length,
+            values: activityValues
+        });
+
+        // その下のA行に「学年ごとの現在の活動部員」、1〜4年、初期値0
+        const gradeStartRow = activityValues.length + 2; // 1行空ける
+        userSheetsBatchData.push({
+            range: `活動!A${gradeStartRow}`,
+            values: [['学年ごとの現在の活動部員']]
+        });
+
+        let gradeValues = [];
+        for (let g = 1; g <= 4; g++) {
+            gradeValues.push([`${g}年`, 0]);
+        }
+        userSheetsBatchData.push({
+            range: `活動!A${gradeStartRow + 1}:B${gradeStartRow + 4}`,
+            values: gradeValues
+        });
+
+        // 7. 「活動実績・予定」シートの構築
+        // A列：12月〜11月 (12, 1, 2, ..., 10, 11) -> 1行開けて上から記入
+        const monthsA = [12, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11];
+        let monthValuesA = [];
+        for (let m = 0; m < monthsA.length; m++) {
+            monthValuesA.push([monthsA[m]]);
+        }
+        userSheetsBatchData.push({
+            range: '活動実績・予定!A2:A13',
+            values: monthValuesA
+        });
+
+        // C列：4月〜3月 (4, 5, 6, ..., 2, 3) -> 1行開けて上から記入
+        const monthsC = [4, 5, 6, 7, 8, 9, 10, 11, 12, 1, 2, 3];
+        let monthValuesC = [];
+        for (let m = 0; m < monthsC.length; m++) {
+            monthValuesC.push([monthsC[m]]);
+        }
+        userSheetsBatchData.push({
+            range: '活動実績・予定!C2:C13',
+            values: monthValuesC
+        });
+
+        // 8. 「備品」シートの構築
+        userSheetsBatchData.push({
+            range: '備品!A1:E1',
+            values: [['取得年', '備品名', '製造所', '仕様形式', '備考']]
+        });
+
         await gapi.client.sheets.spreadsheets.values.batchUpdate({
             spreadsheetId: newSheetId,
             resource: {
@@ -301,6 +371,7 @@ async function createNewSheet() {
             }
         });
 
+        // 9. 「科目別合計」シートの構築
         let batchValueData = [];
 
         let bValues = [];
@@ -402,6 +473,7 @@ async function createNewSheet() {
             }
         });
 
+        // 10. ログ管理シートへの登録・更新処理
         const newRow = [newSheetTitle, newSheetUrl, new Date().toLocaleString()];
         let finalRows = [newRow];
         
@@ -421,7 +493,7 @@ async function createNewSheet() {
         });
 
         document.getElementById('content').innerText = 
-            `処理完了！\n「科目別合計」および指定されたすべてのシートと数式・合計列の構築が完了しました。`;
+            `処理完了！\n「科目別合計」に加え、「活動」「活動実績・予定」「備品」シートの構築が完了しました。`;
 
         const linksDiv = document.getElementById('links');
         linksDiv.innerHTML = `
