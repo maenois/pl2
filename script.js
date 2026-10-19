@@ -29,15 +29,18 @@ const DISCOVERY_DOCS = [
 let tokenClient;
 let gapiInited = false;
 let ginisInited = false;
-let pickerInited = false;
 let accessToken = null;
+
+// フォルダ階層ブラウザ用の状態管理
+let currentFolderStack = [{ id: 'root', name: 'マイドライブ' }];
+let selectedFolderId = 'root';
+let selectedFolderName = 'マイドライブ';
 
 // ==========================================
 // 2. 初期化と認証関連
 // ==========================================
 function gapiLoaded() {
     gapi.load('client', initializeGapiClient);
-    gapi.load('picker', () => { pickerInited = true; });
 }
 
 async function initializeGapiClient() {
@@ -111,80 +114,97 @@ function switchView(viewName) {
         document.getElementById('view_menu').style.display = 'block';
     } else if (viewName === 'spreadsheet') {
         document.getElementById('view_spreadsheet').style.display = 'block';
+        // スプレッドシート画面を開いたときにルートフォルダの一覧を読み込む
+        loadFolderContent('root', 'マイドライブ');
     } else if (viewName === 'word') {
         document.getElementById('view_word').style.display = 'block';
     }
 }
 
 // ==========================================
-// 4. 階層式フォルダ選択（親を選んでから子を取得）
+// 4. 階層式フォルダブラウザの処理
 // ==========================================
-function openParentFolderPicker() {
-    if (!pickerInited || !accessToken) {
-        alert('Google APIの初期化中または未ログインです。');
-        return;
+
+// 指定したフォルダIDの中身（サブフォルダ）をGoogleドライブから取得して画面に描画
+async function loadFolderContent(folderId, folderName) {
+    const listContainer = document.getElementById('folder_list_container');
+    listContainer.innerHTML = '<p style="color: #666; font-size: 13px; text-align: center;">読み込み中...</p>';
+
+    try {
+        const response = await gapi.client.drive.files.list({
+            q: `'${folderId}' in parents and mimeType = 'application/vnd.google-apps.folder' and trashed = false`,
+            fields: 'files(id, name)',
+            orderBy: 'name',
+            pageSize: 100
+        });
+
+        const folders = response.result.files;
+        listContainer.innerHTML = '';
+
+        if (folders && folders.length > 0) {
+            folders.forEach(folder => {
+                const item = document.createElement('div');
+                item.className = 'folder-item';
+                item.innerHTML = `📁 ${folder.name}`;
+                // ダブルクリックまたはクリックでそのフォルダの中へ移動
+                item.onclick = () => {
+                    currentFolderStack.push({ id: folder.id, name: folder.name });
+                    updateBreadcrumb();
+                    loadFolderContent(folder.id, folder.name);
+                };
+                listContainer.appendChild(item);
+            });
+        } else {
+            listContainer.innerHTML = '<p style="color: #888; font-size: 13px; text-align: center; padding-top: 20px;">サブフォルダはありません</p>';
+        }
+
+    } catch (err) {
+        console.error('フォルダの取得に失敗しました', err);
+        listContainer.innerHTML = '<p style="color: red; font-size: 13px; text-align: center;">フォルダの取得に失敗しました</p>';
     }
-
-    const view = new google.picker.DocsView(google.picker.ViewId.FOLDERS)
-        .setSelectFolderEnabled(true)
-        .setMimeTypes('application/vnd.google-apps.folder');
-
-    const picker = new google.picker.PickerBuilder()
-        .enableFeature(google.picker.Feature.NAV_HIDDEN)
-        .setAppId(APP_ID)
-        .setOAuthToken(accessToken)
-        .addView(view)
-        .setDeveloperKey(API_KEY)
-        .setCallback(parentPickerCallback)
-        .build();
-    
-    picker.setVisible(true);
 }
 
-// 親フォルダが選択されたときのコールバック
-async function parentPickerCallback(data) {
-    if (data[google.picker.Response.ACTION] == google.picker.Action.PICKED) {
-        const doc = data[google.picker.Response.DOCUMENTS][0];
-        const parentId = doc[google.picker.Document.ID];
-        const parentName = doc[google.picker.Document.NAME];
+// パンくずリスト（現在地）の表示を更新
+function updateBreadcrumb() {
+    const breadcrumbContainer = document.getElementById('breadcrumb_container');
+    breadcrumbContainer.innerHTML = '';
 
-        document.getElementById('selected_parent_name').innerText = `📁 ${parentName}`;
-        
-        // 子フォルダのセレクトボックスを有効化して読み込み中にする
-        const childSelect = document.getElementById('child_folder_select');
-        childSelect.innerHTML = '<option value="">子フォルダを読み込み中...</option>';
-        childSelect.disabled = false;
+    currentFolderStack.forEach((folder, index) => {
+        const span = document.createElement('span');
+        span.className = 'breadcrumb-item';
+        span.innerText = folder.name;
+        span.onclick = () => {
+            // 選択したパンくずの位置までスタックを巻き戻す
+            currentFolderStack = currentFolderStack.slice(0, index + 1);
+            updateBreadcrumb();
+            loadFolderContent(folder.id, folder.name);
+        };
+        breadcrumbContainer.appendChild(span);
 
-        try {
-            // Google Drive APIを使って、親フォルダの直下にあるサブフォルダを検索
-            const response = await gapi.client.drive.files.list({
-                q: `'${parentId}' in parents and mimeType = 'application/vnd.google-apps.folder' and trashed = false`,
-                fields: 'files(id, name)',
-                pageSize: 100
-            });
-
-            const folders = response.result.files;
-            childSelect.innerHTML = '<option value="">-- 保存先の子フォルダを選択 --</option>';
-
-            if (folders && folders.length > 0) {
-                folders.forEach(folder => {
-                    const option = document.createElement('option');
-                    option.value = folder.id;
-                    option.text = folder.name;
-                    childSelect.appendChild(option);
-                });
-            } else {
-                const option = document.createElement('option');
-                option.value = parentId; // 子がない場合は親をそのまま保存先にする
-                option.text = '（直下に子フォルダはありません。ここを保存先にします）';
-                childSelect.appendChild(option);
-            }
-
-        } catch (err) {
-            console.error('子フォルダの取得に失敗しました', err);
-            childSelect.innerHTML = '<option value="">子フォルダの取得に失敗しました</option>';
+        if (index < currentFolderStack.length - 1) {
+            const separator = document.createElement('span');
+            separator.innerText = ' > ';
+            separator.style.margin = '0 3px';
+            breadcrumbContainer.appendChild(separator);
         }
-    }
+    });
+}
+
+// パンくずから直接移動するための補助
+function navigateToFolder(id, name) {
+    currentFolderStack = [{ id: id, name: name }];
+    updateBreadcrumb();
+    loadFolderContent(id, name);
+}
+
+// 「このフォルダを保存先に決定」ボタンが押されたとき
+function confirmCurrentFolder() {
+    const currentActiveFolder = currentFolderStack[currentFolderStack.length - 1];
+    selectedFolderId = currentActiveFolder.id;
+    selectedFolderName = currentActiveFolder.name;
+
+    document.getElementById('target_folder_display').innerText = `選択中: ${selectedFolderName}`;
+    alert(`保存先を「${selectedFolderName}」に決定しました！`);
 }
 
 // ==========================================
@@ -192,12 +212,11 @@ async function parentPickerCallback(data) {
 // ==========================================
 async function createNewSheet() {
     try {
-        // 子フォルダのセレクトボックスから選択中のIDを取得（未選択なら親またはルート）
-        const childSelect = document.getElementById('child_folder_select');
-        const targetFolderId = childSelect ? childSelect.value : '';
+        // 確定されたフォルダIDを使用する（未確定の場合は現在の階層を使用）
+        const currentActiveFolder = currentFolderStack[currentFolderStack.length - 1];
+        const targetFolderId = selectedFolderId !== 'root' ? selectedFolderId : currentActiveFolder.id;
 
         const newSheetTitle = document.getElementById('sheet_title_input').value.trim() || 'カスタムデータシート';
-        
         const rawSheetNames = document.getElementById('sheet_names_input') ? document.getElementById('sheet_names_input').value.trim() : '';
         const userSheetNames = rawSheetNames ? rawSheetNames.split(',').map(name => name.trim()).filter(name => name !== '' && name !== '科目別合計') : ['集計用'];
 
@@ -572,7 +591,7 @@ async function createNewSheet() {
             <a href="https://docs.google.com/spreadsheets/d/${logSheetId}/edit" target="_blank">📊 ログ管理シートを開く</a>
             <a href="${newSheetUrl}" target="_blank">📄 新しく作った「${newSheetTitle}」を開く</a>
             <br><br>
-            <button onclick="switchView('menu')" class="btn-back" style="float: none; display: inline-block;">メニューに戻る</button>
+            <button onclick="switchView('menu')" class="btn-blue" style="display: inline-block;">メニューに戻る</button>
         `;
 
     } catch (err) {
@@ -591,7 +610,7 @@ async function createSpreadsheetInFolder(title, folderId) {
         name: title,
         mimeType: 'application/vnd.google-apps.spreadsheet'
     };
-    if (folderId && folderId !== '') {
+    if (folderId && folderId !== 'root' && folderId !== '') {
         resource.parents = [folderId];
     }
 
