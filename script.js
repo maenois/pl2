@@ -1,5 +1,5 @@
 // ==========================================
-// 1. 設定エリア（ご自身の情報に書き換えてください）
+// 2. 設定エリア（ご自身の情報に書き換えてください）
 // ==========================================
 const CLIENT_ID = '893360002885-juvu8vp11q6si42ebojo4i483vd3sqkl.apps.googleusercontent.com';
 const API_KEY = 'AIzaSyDKcb8Ztk9C_zs5oTbNSAcSbXmyNyUEM8Q'; // Google Cloud Consoleで発行した「APIキー」を入れてください
@@ -146,12 +146,16 @@ async function createSpreadsheetInFolder(title, folderId) {
 }
 
 // ==========================================
-// 5. 新規シート作成 ＆ IDベースの重複防止・名前変更の上書き同期・削除の自動除外
+// 5. 新規シート作成 ＆ 複数タブ設定・IDベースの重複防止・名前変更の上書き同期・削除の自動除外
 // ==========================================
 async function createNewSheet() {
     try {
         const targetFolderId = localStorage.getItem('app_target_folder_id') || '';
         const newSheetTitle = document.getElementById('sheet_title_input').value.trim() || 'カスタムデータシート';
+        
+        // ユーザーが入力したタブ（シート）名を取得（カンマ区切りで配列化）
+        const rawSheetNames = document.getElementById('sheet_names_input') ? document.getElementById('sheet_names_input').value.trim() : '';
+        const sheetNames = rawSheetNames ? rawSheetNames.split(',').map(name => name.trim()).filter(name => name !== '') : ['シート1'];
 
         document.getElementById('content').innerHTML = '<p>既存のシート状態を確認・同期中...</p>';
 
@@ -188,10 +192,10 @@ async function createNewSheet() {
         const header = rows.length > 0 ? rows[0] : ['シート名', 'スプレッドシートURL', '作成日時'];
         let dataRows = rows.length > 1 ? rows.slice(1) : [];
 
-        // 3. スプレッドシートIDごとにユニークに管理するためのMap (重複を防ぎ、既存行を更新する)
+        // 3. スプレッドシートIDごとにユニークに管理するためのMap
         let uniqueSheetMap = new Map();
 
-        // 4. 既存データを巡回してチェック
+        // 4. 既存データを巡回してチェック（削除済み除外 ＆ 名前変更の反映）
         for (let i = 0; i < dataRows.length; i++) {
             const row = dataRows[i];
             const url = row[1]; // B列（URL）
@@ -200,52 +204,71 @@ async function createNewSheet() {
                 if (match && match[1]) {
                     const sheetId = match[1];
 
-                    // すでにこのIDがマップに登録されている場合はスキップ（二重登録を防ぐ）
-                    if (uniqueSheetMap.has(sheetId)) {
-                        continue;
-                    }
+                    if (uniqueSheetMap.has(sheetId)) continue;
 
                     try {
-                        // ドライブから最新のファイル名と削除状態を取得
                         const fileResp = await gapi.client.drive.files.get({
                             fileId: sheetId,
                             fields: 'name, trashed'
                         });
 
-                        // ファイルが生きていて、ゴミ箱に入っていない場合のみ保持
                         if (fileResp && fileResp.result && !fileResp.result.trashed) {
-                            // 名前が変更されていたら最新の名称でA列を書き換える
-                            row[0] = fileResp.result.name; 
+                            row[0] = fileResp.result.name; // 変更された名前を反映
                             uniqueSheetMap.set(sheetId, row);
                         }
                     } catch (e) {
-                        // 404等で削除されていた場合はマップに入れない（＝サーバーのログからも消える）
                         console.warn(`ID ${sheetId} は削除されたか見つからないためログから除外します`, e);
                     }
                 }
             }
         }
 
-        document.getElementById('content').innerHTML = `<p>「${newSheetTitle}」を作成中...</p>`;
+        document.getElementById('content').innerHTML = `<p>「${newSheetTitle}」と指定されたシートを作成中...</p>`;
 
-        // 5. 新しいカスタムシートを作成
+        // 5. 新しいカスタムスプレッドシートを作成
         const newSheetId = await createSpreadsheetInFolder(newSheetTitle, targetFolderId);
         const newSheetUrl = `https://docs.google.com/spreadsheets/d/${newSheetId}/edit`;
 
-        // 新しく作ったシートのデータを作成
+        // 6. 指定された複数のシート名に合わせてタブを設定する
+        const newSpInfo = await gapi.client.sheets.spreadsheets.get({ spreadsheetId: newSheetId });
+        const defaultSheetId = newSpInfo.result.sheets[0].properties.sheetId;
+
+        let requests = [{
+            updateSheetProperties: {
+                properties: {
+                    sheetId: defaultSheetId,
+                    title: sheetNames[0]
+                },
+                fields: 'title'
+            }
+        }];
+
+        for (let i = 1; i < sheetNames.length; i++) {
+            requests.push({
+                addSheet: {
+                    properties: {
+                        title: sheetNames[i]
+                    }
+                }
+            });
+        }
+
+        await gapi.client.sheets.spreadsheets.batchUpdate({
+            spreadsheetId: newSheetId,
+            resource: { requests: requests }
+        });
+
+        // 7. 新しいデータの作成と、既存データとのマージ（重複排除）
         const newRow = [newSheetTitle, newSheetUrl, new Date().toLocaleString()];
-        
-        // マップの先頭（最新）に追加できるように、新しいものを一番上に配置して再構築
         let finalRows = [newRow];
         
-        // 既存のシートたちをマップから取り出して順番に繋げる（すでに新しく作ったものと同じIDが万が一あれば除外）
         for (let [sheetId, row] of uniqueSheetMap) {
             if (sheetId !== newSheetId) {
                 finalRows.push(row);
             }
         }
 
-        // 6. 整理されたデータ（ヘッダー ＋ 最新が先頭・名前自動書換済み・重複なし・削除済み削除）を書き戻す
+        // 8. サーバースプシのログを更新
         await gapi.client.sheets.spreadsheets.values.update({
             spreadsheetId: logSheetId,
             range: `${logFirstSheetName}!A1`,
@@ -256,7 +279,7 @@ async function createNewSheet() {
         });
 
         document.getElementById('content').innerText = 
-            `処理完了！\n最新情報を同期し、新しいシートを追加しました。`;
+            `処理完了！\n「${sheetNames.join(', ')}」のシートを持つスプレッドシートを作成し、ログを綺麗に整理しました。`;
 
         const linksDiv = document.getElementById('links');
         linksDiv.innerHTML = `
