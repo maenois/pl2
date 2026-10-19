@@ -1,4 +1,19 @@
 // ==========================================
+// 0. パスワード認証
+// ==========================================
+function checkPassword() {
+    const inputVal = document.getElementById('password_input').value;
+    const errorMsg = document.getElementById('password_error');
+
+    if (inputVal === '1202') {
+        document.getElementById('password_section').style.display = 'none';
+        document.getElementById('main_app_content').style.display = 'block';
+    } else {
+        errorMsg.innerText = 'パスワードが間違っています。';
+    }
+}
+
+// ==========================================
 // 1. 設定エリア（ご自身の情報に書き換えてください）
 // ==========================================
 const CLIENT_ID = '893360002885-juvu8vp11q6si42ebojo4i483vd3sqkl.apps.googleusercontent.com';
@@ -162,7 +177,6 @@ async function createNewSheet() {
         const targetFolderId = localStorage.getItem('app_target_folder_id') || '';
         const newSheetTitle = document.getElementById('sheet_title_input').value.trim() || 'カスタムデータシート';
         
-        // ユーザーが入力した各シート名を取得（重複防止のため「科目別合計」は除外）
         const rawSheetNames = document.getElementById('sheet_names_input') ? document.getElementById('sheet_names_input').value.trim() : '';
         const userSheetNames = rawSheetNames ? rawSheetNames.split(',').map(name => name.trim()).filter(name => name !== '' && name !== '科目別合計') : ['集計用'];
 
@@ -170,7 +184,6 @@ async function createNewSheet() {
 
         let logSheetId = localStorage.getItem('app_log_sheet_id');
 
-        // 1. ログ管理シートがなければ新規作成
         if (!logSheetId) {
             logSheetId = await createSpreadsheetInFolder('アプリ用ログ管理シート', targetFolderId);
             localStorage.setItem('app_log_sheet_id', logSheetId);
@@ -191,7 +204,6 @@ async function createNewSheet() {
         const logSpreadsheetInfo = await gapi.client.sheets.spreadsheets.get({ spreadsheetId: logSheetId });
         const logFirstSheetName = logSpreadsheetInfo.result.sheets[0].properties.title;
 
-        // 2. サーバースプシの全データを取得（重複・削除チェック）
         const getResp = await gapi.client.sheets.spreadsheets.values.get({
             spreadsheetId: logSheetId,
             range: `${logFirstSheetName}!A:C`
@@ -230,11 +242,9 @@ async function createNewSheet() {
 
         document.getElementById('content').innerHTML = `<p>「${newSheetTitle}」および「科目別合計」を作成中...</p>`;
 
-        // 3. 新規スプレッドシートを作成
         const newSheetId = await createSpreadsheetInFolder(newSheetTitle, targetFolderId);
         const newSheetUrl = `https://docs.google.com/spreadsheets/d/${newSheetId}/edit`;
 
-        // 4. 先頭に「科目別合計」を作り、その後にユーザー指定のシートを追加
         const newSpInfo = await gapi.client.sheets.spreadsheets.get({ spreadsheetId: newSheetId });
         const defaultSheetId = newSpInfo.result.sheets[0].properties.sheetId;
 
@@ -263,24 +273,20 @@ async function createNewSheet() {
             resource: { requests: requests }
         });
 
-        // 5. ユーザー指定の各シート（A〜H見出し、C列・F列の数式）を設定
         let userSheetsBatchData = [];
         for (let i = 0; i < userSheetNames.length; i++) {
             const sName = userSheetNames[i];
 
-            // A1〜H1に見出し
             userSheetsBatchData.push({
                 range: `${sName}!A1:H1`,
                 values: [['物品名', '科目コード', '科目名', '単価', '個数', '合計金額', '備考', '予算資料に書く説明']]
             });
 
-            // C2にVLOOKUP数式
             userSheetsBatchData.push({
                 range: `${sName}!C2`,
                 values: [[`=ARRAYFORMULA(IFERROR(VLOOKUP(B2:B, '科目別合計'!$B$3:$C$23, 2, FALSE), ""))`]]
             });
 
-            // F2に計算式
             userSheetsBatchData.push({
                 range: `${sName}!F2`,
                 values: [[`=ARRAYFORMULA(IF((D2:D="")+(E2:E=""), "", D2:D * IF(E2:E="一式", 1, E2:E)))`]]
@@ -295,10 +301,8 @@ async function createNewSheet() {
             }
         });
 
-        // 6. 「科目別合計」シートの構築
         let batchValueData = [];
 
-        // B3:B23 に 11〜31
         let bValues = [];
         for (let n = 11; n <= 31; n++) {
             bValues.push([n]);
@@ -308,7 +312,6 @@ async function createNewSheet() {
             values: bValues
         });
 
-        // C2:C25 に科目一覧と合計
         const subjects = [
             '科目一覧', 'ゼミナール・研究発表費', '講演会費', '試合・大会費', '連盟費', 
             '合宿費', '新聞・図書費', '機関紙発行費', '調査費', '会議費', 
@@ -329,32 +332,27 @@ async function createNewSheet() {
             values: fullCValues
         });
 
-        // D列以降に各シートごとの数式やSUM関数を配置
         for (let i = 0; i < userSheetNames.length; i++) {
             const sName = userSheetNames[i];
-            const currentCol = 4 + i; // D列 = 4
+            const currentCol = 4 + i;
             const colLetter = getColumnLetter(currentCol);
 
-            // 2行目に見出し（シート名）
             batchValueData.push({
                 range: `科目別合計!${colLetter}2`,
                 values: [[sName]]
             });
 
-            // 3〜23行目に指定された ARRAYFORMULA(SUMIF(...))
-　　　　　　batchValueData.push({
+            batchValueData.push({
                 range: `科目別合計!${colLetter}3`,
                 values: [[`=ARRAYFORMULA(SUMIF('${sName}'!B:B, SEQUENCE(21, 1, 11), '${sName}'!F:F))`]]
             });
 
-            // 25行目に縦のSUM関数
             batchValueData.push({
                 range: `科目別合計!${colLetter}25`,
                 values: [[`=SUM(${colLetter}3:${colLetter}23)`]]
             });
         }
 
-        // シート数から1列空けて、各行の合計列と科目一覧を配置
         const lastUserCol = 4 + userSheetNames.length - 1;
         const skippedCol = lastUserCol + 2;
         const skippedColLetter = getColumnLetter(skippedCol);
@@ -396,7 +394,6 @@ async function createNewSheet() {
             values: [['合計']]
         });
 
-        // まとめて一括書き込み
         await gapi.client.sheets.spreadsheets.values.batchUpdate({
             spreadsheetId: newSheetId,
             resource: {
@@ -405,7 +402,6 @@ async function createNewSheet() {
             }
         });
 
-        // 7. ログ管理シートへの登録・更新処理（重複なし・名前同期・削除自動除外）
         const newRow = [newSheetTitle, newSheetUrl, new Date().toLocaleString()];
         let finalRows = [newRow];
         
