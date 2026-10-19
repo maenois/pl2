@@ -64,9 +64,12 @@ button:hover {
     opacity: 0.85;
 }
 
-/* 青色統一テーマ */
-.btn-blue { background-color: #185abc; }
+/* カラーテーマ */
+.btn-green { background-color: #107c41; } /* スプレッドシート用 */
+.btn-blue { background-color: #185abc; }  /* ワード・ログイン用 */
+.btn-google { background-color: #4285F4; }
 .btn-danger { background-color: #e74c3c; }
+.btn-back { background-color: #7f8c8d; }
 
 .error-text {
     color: #e74c3c;
@@ -169,7 +172,7 @@ hr {
 
 .target-display {
     font-size: 13px;
-    color: #185abc;
+    color: #107c41;
     font-weight: bold;
     word-break: break-all;
 }
