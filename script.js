@@ -1,5 +1,5 @@
 // ==========================================
-// 2. パスワード認証
+// 0. パスワード認証
 // ==========================================
 function checkPassword() {
     const inputVal = document.getElementById('password_input').value;
@@ -521,6 +521,7 @@ async function createNewSheet() {
             }
         });
 
+        // 10. ログ管理シートへの登録・更新処理（一度クリアしてから書き込む）
         const newRow = [newSheetTitle, newSheetUrl, new Date().toLocaleString()];
         let finalRows = [newRow];
         
@@ -530,6 +531,13 @@ async function createNewSheet() {
             }
         }
 
+        // 古いゴミデータを残さないために一度シート内をクリア
+        await gapi.client.sheets.spreadsheets.values.clear({
+            spreadsheetId: logSheetId,
+            range: `${logFirstSheetName}!A:C`
+        });
+
+        // 新しい正しいリストを書き込む
         await gapi.client.sheets.spreadsheets.values.update({
             spreadsheetId: logSheetId,
             range: `${logFirstSheetName}!A1`,
