@@ -1,5 +1,5 @@
 // ==========================================
-// 1. パスワード認証
+// 2. パスワード認証
 // ==========================================
 function checkPassword() {
     const inputVal = document.getElementById('password_input').value;
@@ -351,7 +351,7 @@ async function createNewSheet() {
         });
 
         // ----------------------------------------------------
-        // 「備品」シートの処理（安全対策版）
+        // 「備品」シートの処理（リトライ機能付き）
         // ----------------------------------------------------
         let bibinCopied = false;
         if (dataRows.length > 0 && dataRows[0][1]) {
@@ -359,27 +359,34 @@ async function createNewSheet() {
             const match = prevUrl.match(/\/d\/([a-zA-Z0-9-_]+)/);
             if (match && match[1]) {
                 const prevSheetId = match[1];
-                try {
-                    const prevSpInfo = await gapi.client.sheets.spreadsheets.get({ spreadsheetId: prevSheetId });
-                    const prevBibinSheet = prevSpInfo.result.sheets.find(s => s.properties.title === '備品');
+                
+                for (let attempt = 0; attempt < 2; attempt++) {
+                    try {
+                        if (attempt > 0) {
+                            await new Promise(resolve => setTimeout(resolve, 1000));
+                        }
+                        
+                        const prevSpInfo = await gapi.client.sheets.spreadsheets.get({ spreadsheetId: prevSheetId });
+                        const prevBibinSheet = prevSpInfo.result.sheets.find(s => s.properties.title === '備品');
 
-                    if (prevBibinSheet) {
-                        await gapi.client.sheets.spreadsheets.sheets.copyTo({
-                            spreadsheetId: prevSheetId,
-                            sheetId: prevBibinSheet.properties.sheetId,
-                            resource: {
-                                destinationSpreadsheetId: newSheetId
-                            }
-                        });
-                        bibinCopied = true;
+                        if (prevBibinSheet) {
+                            await gapi.client.sheets.spreadsheets.sheets.copyTo({
+                                spreadsheetId: prevSheetId,
+                                sheetId: prevBibinSheet.properties.sheetId,
+                                resource: {
+                                    destinationSpreadsheetId: newSheetId
+                                }
+                            });
+                            bibinCopied = true;
+                            break;
+                        }
+                    } catch (e) {
+                        console.warn(`過去の備品シートの取得トライ ${attempt + 1} 回目で失敗`, e);
                     }
-                } catch (e) {
-                    console.warn('過去の備品シートのコピーに失敗したため、新規作成します', e);
                 }
             }
         }
 
-        // コピーできなかった場合は新規に「備品」シートを作成する
         if (!bibinCopied) {
             await gapi.client.sheets.spreadsheets.batchUpdate({
                 spreadsheetId: newSheetId,
@@ -393,7 +400,6 @@ async function createNewSheet() {
             });
         }
 
-        // ★追加・確実な対策: 作成またはコピーが完了したスプレッドシートの構造を再取得して「備品」が存在することを確認してから見出しを入れる
         let bibinExists = false;
         try {
             const checkSpInfo = await gapi.client.sheets.spreadsheets.get({ spreadsheetId: newSheetId });
