@@ -1,4 +1,6 @@
-// クライアントIDとGoogle Cloud Consoleのプロジェクト番号（APIキーとDeveloper Key）の設定
+// ==========================================
+// 1. 設定エリア（ご自身の情報に書き換えてください）
+// ==========================================
 const CLIENT_ID = '893360002885-juvu8vp11q6si42ebojo4i483vd3sqkl.apps.googleusercontent.com';
 const API_KEY = 'AIzaSyDKcb8Ztk9C_zs5oTbNSAcSbXmyNyUEM8Q'; // Google Cloud Consoleで発行した「APIキー」を入れてください
 const APP_ID = '893360002885'; // プロジェクト番号（数値）
@@ -125,7 +127,7 @@ function pickerCallback(data) {
 }
 
 // ==========================================
-// 4. スプレッドシート作成・ログ管理のメイン処理
+// 4. スプレッドシート作成ヘルパー
 // ==========================================
 async function createSpreadsheetInFolder(title, folderId) {
     const resource = {
@@ -143,16 +145,19 @@ async function createSpreadsheetInFolder(title, folderId) {
     return response.result.id;
 }
 
+// ==========================================
+// 5. 新規シート作成 ＆ B列リンク巡回による名前自動同期のメイン処理
+// ==========================================
 async function createNewSheet() {
     try {
         const targetFolderId = localStorage.getItem('app_target_folder_id') || '';
         const newSheetTitle = document.getElementById('sheet_title_input').value.trim() || 'カスタムデータシート';
 
-        document.getElementById('content').innerHTML = '<p>処理を実行中...</p>';
+        document.getElementById('content').innerHTML = '<p>既存のシート名を確認・同期中...</p>';
 
         let logSheetId = localStorage.getItem('app_log_sheet_id');
 
-        // ログ管理シートがなければ新規作成してヘッダーを設定
+        // 1. ログ管理シートがなければ新規作成
         if (!logSheetId) {
             logSheetId = await createSpreadsheetInFolder('アプリ用ログ管理シート', targetFolderId);
             localStorage.setItem('app_log_sheet_id', logSheetId);
@@ -170,16 +175,10 @@ async function createNewSheet() {
             });
         }
 
-        document.getElementById('content').innerHTML = `<p>「${newSheetTitle}」を作成中...</p>`;
-
-        // 新しいカスタムシートを作成
-        const newSheetId = await createSpreadsheetInFolder(newSheetTitle, targetFolderId);
-        const newSheetUrl = `https://docs.google.com/spreadsheets/d/${newSheetId}/edit`;
-
         const logSpreadsheetInfo = await gapi.client.sheets.spreadsheets.get({ spreadsheetId: logSheetId });
         const logFirstSheetName = logSpreadsheetInfo.result.sheets[0].properties.title;
 
-        // 既存のログデータを取得して、一番上に新しい行を差し込む
+        // 2. サーバースプシの全データを取得し、B列のリンクをすべて巡回してA列を最新に直す
         const getResp = await gapi.client.sheets.spreadsheets.values.get({
             spreadsheetId: logSheetId,
             range: `${logFirstSheetName}!A:C`
@@ -187,12 +186,39 @@ async function createNewSheet() {
 
         let rows = getResp.result.values || [];
         const header = rows.length > 0 ? rows[0] : ['シート名', 'スプレッドシートURL', '作成日時'];
-        const dataRows = rows.length > 1 ? rows.slice(1) : [];
+        let dataRows = rows.length > 1 ? rows.slice(1) : [];
 
-        // 新しいデータを先頭（一番上）に追加
+        // B列のリンクをチェックしてA列の名前を最新にアップデート
+        for (let i = 0; i < dataRows.length; i++) {
+            const url = dataRows[i][1]; // B列（URL）
+            if (url) {
+                const match = url.match(/\/d\/([a-zA-Z0-9-_]+)/);
+                if (match && match[1]) {
+                    const sheetId = match[1];
+                    try {
+                        const fileResp = await gapi.client.drive.files.get({
+                            fileId: sheetId,
+                            fields: 'name'
+                        });
+                        const latestName = fileResp.result.name;
+                        dataRows[i][0] = latestName; // A列を現在の最新名に更新
+                    } catch (e) {
+                        console.warn(`ID ${sheetId} の名前取得に失敗しました`, e);
+                    }
+                }
+            }
+        }
+
+        document.getElementById('content').innerHTML = `<p>「${newSheetTitle}」を作成中...</p>`;
+
+        // 3. 新しいカスタムシートを作成
+        const newSheetId = await createSpreadsheetInFolder(newSheetTitle, targetFolderId);
+        const newSheetUrl = `https://docs.google.com/spreadsheets/d/${newSheetId}/edit`;
+
+        // 新しいデータを一番上（先頭）に追加
         dataRows.unshift([newSheetTitle, newSheetUrl, new Date().toLocaleString()]);
 
-        // ヘッダーと新しいデータを合わせて上書き保存
+        // 4. 更新したすべてのデータをサーバースプシに書き戻す
         await gapi.client.sheets.spreadsheets.values.update({
             spreadsheetId: logSheetId,
             range: `${logFirstSheetName}!A1`,
@@ -203,7 +229,7 @@ async function createNewSheet() {
         });
 
         document.getElementById('content').innerText = 
-            `処理が完了しました！\n新しいシートを作成し、ログの先頭に追加しました。`;
+            `処理完了！\nすべてのリンクを確認して名前を同期し、新しいシートを追加しました。`;
 
         const linksDiv = document.getElementById('links');
         linksDiv.innerHTML = `
@@ -219,84 +245,5 @@ async function createNewSheet() {
             errorDetails = err.message || String(err);
         }
         document.getElementById('content').innerHTML = `<pre style="color: red; text-align: left; font-size: 12px; background: #fff; padding: 10px; border: 1px solid #ccc;">エラーが発生しました:\n${errorDetails}</pre>`;
-    }
-}
-// ログ管理シートに記録されているスプレッドシートのファイル名を、Googleドライブの最新情報に同期する関数
-async function syncLogSheetNames() {
-    try {
-        const logSheetId = localStorage.getItem('app_log_sheet_id');
-        if (!logSheetId) {
-            alert('ログ管理シートが見つかりません。');
-            return;
-        }
-
-        document.getElementById('content').innerHTML = '<p>スプレッドシートの最新ファイル名を確認・同期中...</p>';
-
-        const logSpreadsheetInfo = await gapi.client.sheets.spreadsheets.get({ spreadsheetId: logSheetId });
-        const logFirstSheetName = logSpreadsheetInfo.result.sheets[0].properties.title;
-
-        // ログデータを取得
-        const getResp = await gapi.client.sheets.spreadsheets.values.get({
-            spreadsheetId: logSheetId,
-            range: `${logFirstSheetName}!A:C`
-        });
-
-        let rows = getResp.result.values || [];
-        if (rows.length <= 1) {
-            document.getElementById('content').innerHTML = '<p>同期するログデータがまだありません。</p>';
-            return;
-        }
-
-        const header = rows[0];
-        let updatedCount = 0;
-
-        // 2行目（データ行）以降をループして、現在のファイル名をチェック
-        for (let i = 1; i < rows.length; i++) {
-            const currentName = rows[i][0];
-            const url = rows[i][1];
-            
-            if (url) {
-                // URLからスプレッドシートIDを抽出 (https://docs.google.com/spreadsheets/d/XXX/edit)
-                const match = url.match(/\/d\/([a-zA-Z0-9-_]+)/);
-                if (match && match[1]) {
-                    const sheetId = match[1];
-                    try {
-                        // Googleドライブから現在の最新ファイル名を取得
-                        const fileResp = await gapi.client.drive.files.get({
-                            fileId: sheetId,
-                            fields: 'name'
-                        });
-                        const latestName = fileResp.result.name;
-
-                        // 名前が変わっていれば更新
-                        if (currentName !== latestName) {
-                            rows[i][0] = latestName;
-                            updatedCount++;
-                        }
-                    } catch (e) {
-                        console.warn(`ID ${sheetId} のファイル名取得に失敗しました`, e);
-                    }
-                }
-            }
-        }
-
-        // 変更があった場合のみログシートを上書き保存
-        if (updatedCount > 0) {
-            await gapi.client.sheets.spreadsheets.values.update({
-                spreadsheetId: logSheetId,
-                range: `${logFirstSheetName}!A1`,
-                valueInputOption: 'USER_ENTERED',
-                resource: {
-                    values: rows
-                }
-            });
-            document.getElementById('content').innerHTML = `<p>同期完了！ ${updatedCount}件のファイル名変更をログに反映しました。</p>`;
-        } else {
-            document.getElementById('content').innerHTML = '<p>変更されたファイル名はありませんでした（すべて最新です）。</p>';
-        }
-
-    } catch (err) {
-        console.error('同期エラー:', err);
-        document.getElementById('content').innerHTML = `<p style="color: red;">同期中にエラーが発生しました。</p>`;
     }
 }
