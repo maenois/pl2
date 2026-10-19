@@ -79,11 +79,6 @@ function onLoginSuccess() {
     document.getElementById('authorize_button').style.display = 'none';
     document.getElementById('app_section').style.display = 'block';
     
-    const savedName = localStorage.getItem('app_target_folder_name');
-    if (savedName) {
-        document.getElementById('selected_folder_name').innerText = savedName;
-    }
-
     // ログイン成功時はメニュー画面を表示
     switchView('menu');
 }
@@ -105,16 +100,13 @@ function handleSignoutClick() {
 // 3. 画面（ビュー）の切り替え管理
 // ==========================================
 function switchView(viewName) {
-    // すべての画面を一旦非表示にする
     document.getElementById('view_menu').style.display = 'none';
     document.getElementById('view_spreadsheet').style.display = 'none';
     document.getElementById('view_word').style.display = 'none';
     
-    // メッセージやリンクエリアをクリア
     document.getElementById('content').innerText = '';
     document.getElementById('links').innerHTML = '';
 
-    // 指定された画面だけを表示する
     if (viewName === 'menu') {
         document.getElementById('view_menu').style.display = 'block';
     } else if (viewName === 'spreadsheet') {
@@ -125,9 +117,9 @@ function switchView(viewName) {
 }
 
 // ==========================================
-// 4. Google Picker（フォルダ選択）
+// 4. 階層式フォルダ選択（親を選んでから子を取得）
 // ==========================================
-function openFolderPicker() {
+function openParentFolderPicker() {
     if (!pickerInited || !accessToken) {
         alert('Google APIの初期化中または未ログインです。');
         return;
@@ -143,22 +135,55 @@ function openFolderPicker() {
         .setOAuthToken(accessToken)
         .addView(view)
         .setDeveloperKey(API_KEY)
-        .setCallback(pickerCallback)
+        .setCallback(parentPickerCallback)
         .build();
     
     picker.setVisible(true);
 }
 
-function pickerCallback(data) {
+// 親フォルダが選択されたときのコールバック
+async function parentPickerCallback(data) {
     if (data[google.picker.Response.ACTION] == google.picker.Action.PICKED) {
         const doc = data[google.picker.Response.DOCUMENTS][0];
-        const folderId = doc[google.picker.Document.ID];
-        const folderName = doc[google.picker.Document.NAME];
+        const parentId = doc[google.picker.Document.ID];
+        const parentName = doc[google.picker.Document.NAME];
 
-        localStorage.setItem('app_target_folder_id', folderId);
-        localStorage.setItem('app_target_folder_name', folderName);
+        document.getElementById('selected_parent_name').innerText = `📁 ${parentName}`;
+        
+        // 子フォルダのセレクトボックスを有効化して読み込み中にする
+        const childSelect = document.getElementById('child_folder_select');
+        childSelect.innerHTML = '<option value="">子フォルダを読み込み中...</option>';
+        childSelect.disabled = false;
 
-        document.getElementById('selected_folder_name').innerText = `📁 ${folderName}`;
+        try {
+            // Google Drive APIを使って、親フォルダの直下にあるサブフォルダを検索
+            const response = await gapi.client.drive.files.list({
+                q: `'${parentId}' in parents and mimeType = 'application/vnd.google-apps.folder' and trashed = false`,
+                fields: 'files(id, name)',
+                pageSize: 100
+            });
+
+            const folders = response.result.files;
+            childSelect.innerHTML = '<option value="">-- 保存先の子フォルダを選択 --</option>';
+
+            if (folders && folders.length > 0) {
+                folders.forEach(folder => {
+                    const option = document.createElement('option');
+                    option.value = folder.id;
+                    option.text = folder.name;
+                    childSelect.appendChild(option);
+                });
+            } else {
+                const option = document.createElement('option');
+                option.value = parentId; // 子がない場合は親をそのまま保存先にする
+                option.text = '（直下に子フォルダはありません。ここを保存先にします）';
+                childSelect.appendChild(option);
+            }
+
+        } catch (err) {
+            console.error('子フォルダの取得に失敗しました', err);
+            childSelect.innerHTML = '<option value="">子フォルダの取得に失敗しました</option>';
+        }
     }
 }
 
@@ -167,7 +192,10 @@ function pickerCallback(data) {
 // ==========================================
 async function createNewSheet() {
     try {
-        const targetFolderId = localStorage.getItem('app_target_folder_id') || '';
+        // 子フォルダのセレクトボックスから選択中のIDを取得（未選択なら親またはルート）
+        const childSelect = document.getElementById('child_folder_select');
+        const targetFolderId = childSelect ? childSelect.value : '';
+
         const newSheetTitle = document.getElementById('sheet_title_input').value.trim() || 'カスタムデータシート';
         
         const rawSheetNames = document.getElementById('sheet_names_input') ? document.getElementById('sheet_names_input').value.trim() : '';
@@ -343,7 +371,9 @@ async function createNewSheet() {
             }
         });
 
+        // ----------------------------------------------------
         // 「備品」シートの処理（リトライ機能付き）
+        // ----------------------------------------------------
         let bibinCopied = false;
         if (dataRows.length > 0 && dataRows[0][1]) {
             const prevUrl = dataRows[0][1];
@@ -409,6 +439,7 @@ async function createNewSheet() {
                 }
             });
         }
+        // ----------------------------------------------------
 
         let batchValueData = [];
 
