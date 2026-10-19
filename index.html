@@ -26,13 +26,8 @@
         <div id="main_app_content" class="card" style="display: none;">
             <h2>自動生成システム</h2>
 
-            <!-- フォルダ選択＆Googleログインエリア -->
+            <!-- Googleログインエリア（ログインボタンのみ） -->
             <div class="auth-box">
-                <div class="folder-select-area">
-                    <button onclick="openFolderPicker()" id="folder_picker_button">📁 保存先フォルダを選択</button>
-                    <span id="selected_folder_name">未選択（マイドライブ直下）</span>
-                </div>
-                
                 <div class="login-actions">
                     <button id="authorize_button" onclick="handleAuthClick()" style="display: none;" class="btn-google">Googleログイン</button>
                     <button id="signout_button" onclick="handleSignoutClick()" style="display: none;" class="btn-danger">ログアウト</button>
@@ -41,23 +36,38 @@
 
             <hr>
 
-            <!-- 各画面コンテナ（JavaScriptで表示を切り替えます） -->
+            <!-- 各画面コンテナ -->
             <div id="app_section" style="display: none;">
 
                 <!-- ① メニュー選択画面 -->
                 <div id="view_menu" class="view-screen">
                     <h3>作成するファイルの種類を選んでください</h3>
-                    <p>保存先フォルダを確認してから、どちらのボタンを押すか選べます。</p>
                     <div class="menu-buttons">
                         <button onclick="switchView('spreadsheet')" class="btn-green">📊 スプレッドシートを作成</button>
                         <button onclick="switchView('word')" class="btn-blue">📄 ワード出力ページへ</button>
                     </div>
                 </div>
 
-                <!-- ② スプレッドシート作成入力画面 -->
+                <!-- ② スプレッドシート作成入力画面（フォルダ階層選択付き） -->
                 <div id="view_spreadsheet" class="view-screen" style="display: none;">
                     <button onclick="switchView('menu')" class="btn-back">← メニューに戻る</button>
                     <h3>📊 スプレッドシート作成</h3>
+                    
+                    <!-- 階層式フォルダ選択エリア -->
+                    <div class="form-group folder-hierarchy-box">
+                        <label>保存先フォルダの選択:</label>
+                        <div style="margin-top: 5px;">
+                            <button onclick="openParentFolderPicker()" class="btn-gray">1. 親フォルダを選択</button>
+                            <span id="selected_parent_name" class="folder-label">未選択</span>
+                        </div>
+                        <div style="margin-top: 10px;">
+                            <label style="font-size: 13px; color: #555;">2. 子フォルダを選択:</label>
+                            <select id="child_folder_select" disabled style="width: 100%; padding: 8px; margin-top: 3px;">
+                                <option value="">-- 先に親フォルダを選んでください --</option>
+                            </select>
+                        </div>
+                    </div>
+
                     <div class="form-group">
                         <label>スプレッドシート名:</label>
                         <input type="text" id="sheet_title_input" value="カスタムデータシート">
@@ -69,7 +79,7 @@
                     <button onclick="createNewSheet()" class="btn-green">スプレッドシートを自動生成する</button>
                 </div>
 
-                <!-- ③ ワード出力画面（Hello World表示用） -->
+                <!-- ③ ワード出力画面 -->
                 <div id="view_word" class="view-screen" style="display: none;">
                     <button onclick="switchView('menu')" class="btn-back">← メニューに戻る</button>
                     <h1 class="hello-world-text">Hello World</h1>
