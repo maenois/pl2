@@ -340,7 +340,7 @@ async function createNewSheet() {
             let formulas = [];
             for (let r = 3; r <= 23; r++) {
                 // B列の対応する値（11〜31）を参照する数式
-                formulas.push([`=ARRAYFORMULA(SUMIF('${sName}'!B:B, B${r}, '${sName}'!F:F))`]);
+                formulas.push([`=ARRAYFORMULA(SUMIF('${sName}'!B:B, SEQUENCE(21, 1, 11), '${sName}'!F:F))`]);
             }
             batchValueData.push({
                 range: `科目別合計!${colLetter}3:${colLetter}23`,
