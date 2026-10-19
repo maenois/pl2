@@ -15,11 +15,9 @@ function checkPassword() {
 
 // ==========================================
 // 1. 設定エリア（ご自身の情報に書き換えてください）
-// ==========================================
 const CLIENT_ID = '893360002885-juvu8vp11q6si42ebojo4i483vd3sqkl.apps.googleusercontent.com';
 const API_KEY = 'AIzaSyDKcb8Ztk9C_zs5oTbNSAcSbXmyNyUEM8Q'; // Google Cloud Consoleで発行した「APIキー」を入れてください
 const APP_ID = '893360002885'; // プロジェクト番号（数値）
-
 const SCOPES = 'https://www.googleapis.com/auth/spreadsheets https://www.googleapis.com/auth/drive.file';
 const DISCOVERY_DOCS = [
     'https://sheets.googleapis.com/$discovery/rest?version=v4',
@@ -84,7 +82,7 @@ function onLoginSuccess() {
         document.getElementById('selected_folder_name').innerText = savedName;
     }
 
-    document.getElementById('content').innerHTML = '<p>ログインしました。保存先フォルダを選んでシート作成ボタンを押してください。</p>';
+    showMenuSelection();
 }
 
 function handleSignoutClick() {
@@ -141,36 +139,81 @@ function pickerCallback(data) {
 }
 
 // ==========================================
-// 4. スプレッドシート作成ヘルパー ＆ 変換関数
+// 4. モード選択画面の表示
 // ==========================================
-async function createSpreadsheetInFolder(title, folderId) {
-    const resource = {
-        name: title,
-        mimeType: 'application/vnd.google-apps.spreadsheet'
-    };
-    if (folderId && folderId !== '') {
-        resource.parents = [folderId];
-    }
-
-    const response = await gapi.client.drive.files.create({
-        resource: resource,
-        fields: 'id, webViewLink'
-    });
-    return response.result.id;
+function showMenuSelection() {
+    document.getElementById('content').innerHTML = `
+        <div style="text-align: center; padding: 20px;">
+            <h3>作成するファイルの種類を選んでください</h3>
+            <p>保存先フォルダを確認してから、どちらのボタンを押すか選べます。</p>
+            <div style="margin-top: 20px; display: flex; justify-content: center; gap: 15px;">
+                <button onclick="prepareSpreadsheetMode()" style="padding: 10px 20px; font-size: 16px; background-color: #107c41; color: white; border: none; border-radius: 4px; cursor: pointer;">📊 スプレッドシートを作成</button>
+                <button onclick="prepareWordMode()" style="padding: 10px 20px; font-size: 16px; background-color: #185abc; color: white; border: none; border-radius: 4px; cursor: pointer;">📄 ワード（ドキュメント）を作成</button>
+            </div>
+        </div>
+    `;
+    document.getElementById('links').innerHTML = '';
 }
 
-function getColumnLetter(colIndex) {
-    let temp, letter = '';
-    while (colIndex > 0) {
-        temp = (colIndex - 1) % 26;
-        letter = String.fromCharCode(temp + 65) + letter;
-        colIndex = (colIndex - temp - 1) / 26;
-    }
-    return letter;
+function prepareSpreadsheetMode() {
+    document.getElementById('content').innerHTML = `
+        <div style="text-align: left; max-width: 500px; margin: 0 auto;">
+            <button onclick="showMenuSelection()" style="margin-bottom: 15px; padding: 5px 10px; cursor: pointer;">← メニューに戻る</button>
+            <h3>📊 スプレッドシート作成</h3>
+            <div style="margin-bottom: 10px;">
+                <label>スプレッドシート名:</label><br>
+                <input type="text" id="sheet_title_input" value="カスタムデータシート" style="width: 100%; padding: 5px;">
+            </div>
+            <div style="margin-bottom: 15px;">
+                <label>シート名（カンマ区切り）:</label><br>
+                <input type="text" id="sheet_names_input" value="集計用" style="width: 100%; padding: 5px;">
+            </div>
+            <button onclick="createNewSheet()" style="padding: 10px 20px; background-color: #107c41; color: white; border: none; border-radius: 4px; cursor: pointer;">スプレッドシートを自動生成する</button>
+        </div>
+    `;
+}
+
+function prepareWordMode() {
+    document.getElementById('content').innerHTML = `
+        <div style="text-align: left; max-width: 500px; margin: 0 auto;">
+            <button onclick="showMenuSelection()" style="margin-bottom: 15px; padding: 5px 10px; cursor: pointer;">← メニューに戻る</button>
+            <h3>📄 ワード（Googleドキュメント）作成</h3>
+            <div style="margin-bottom: 10px;">
+                <label>ドキュメント名:</label><br>
+                <input type="text" id="doc_title_input" value="新しいドキュメント" style="width: 100%; padding: 5px;">
+            </div>
+            <button onclick="createNewDocument()" style="padding: 10px 20px; background-color: #185abc; color: white; border: none; border-radius: 4px; cursor: pointer;">ドキュメントを作成する（動作確認用）</button>
+        </div>
+    `;
 }
 
 // ==========================================
-// 5. 新規シート作成 ＆ 完全自動構築メイン処理
+// 5. ワード（Googleドキュメント）動作確認用モック処理
+// ==========================================
+async function createNewDocument() {
+    try {
+        const docTitle = document.getElementById('doc_title_input').value.trim() || '新しいドキュメント';
+
+        document.getElementById('content').innerHTML = `<p>「${docTitle}」を作成中（シミュレーション）...</p>`;
+
+        // 動作確認のため1秒だけ待機して完了を演出
+        await new Promise(resolve => setTimeout(resolve, 1000));
+
+        document.getElementById('content').innerText = `動作確認完了！\n「${docTitle}」の作成シミュレーションが完了しました。`;
+        document.getElementById('links').innerHTML = `
+            <span style="color: #666; font-size: 14px;">※API連携無効（画面遷移テスト中）</span>
+            <br><br>
+            <button onclick="showMenuSelection()" style="padding: 5px 10px; cursor: pointer;">メニューに戻る</button>
+        `;
+
+    } catch (err) {
+        let errorDetails = err.message || String(err);
+        document.getElementById('content').innerHTML = `<pre style="color: red;">エラーが発生しました:\n${errorDetails}</pre>`;
+    }
+}
+
+// ==========================================
+// 6. スプレッドシート作成 ＆ 完全自動構築メイン処理
 // ==========================================
 async function createNewSheet() {
     try {
@@ -521,7 +564,6 @@ async function createNewSheet() {
             }
         });
 
-        // 10. ログ管理シートへの登録・更新処理（一度クリアしてから書き込む）
         const newRow = [newSheetTitle, newSheetUrl, new Date().toLocaleString()];
         let finalRows = [newRow];
         
@@ -531,13 +573,11 @@ async function createNewSheet() {
             }
         }
 
-        // 古いゴミデータを残さないために一度シート内をクリア
         await gapi.client.sheets.spreadsheets.values.clear({
             spreadsheetId: logSheetId,
             range: `${logFirstSheetName}!A:C`
         });
 
-        // 新しい正しいリストを書き込む
         await gapi.client.sheets.spreadsheets.values.update({
             spreadsheetId: logSheetId,
             range: `${logFirstSheetName}!A1`,
@@ -548,12 +588,14 @@ async function createNewSheet() {
         });
 
         document.getElementById('content').innerText = 
-            `処理完了！\nすべてのシート（科目別合計・活動・活動実績・予定・備品など）の構築が完了しました。`;
+            `処理完了！\nスプレッドシートの構築が完了しました。`;
 
         const linksDiv = document.getElementById('links');
         linksDiv.innerHTML = `
             <a href="https://docs.google.com/spreadsheets/d/${logSheetId}/edit" target="_blank">📊 ログ管理シートを開く</a>
             <a href="${newSheetUrl}" target="_blank">📄 新しく作った「${newSheetTitle}」を開く</a>
+            <br><br>
+            <button onclick="showMenuSelection()" style="padding: 5px 10px; cursor: pointer;">メニューに戻る</button>
         `;
 
     } catch (err) {
@@ -565,4 +607,30 @@ async function createNewSheet() {
         }
         document.getElementById('content').innerHTML = `<pre style="color: red; text-align: left; font-size: 12px; background: #fff; padding: 10px; border: 1px solid #ccc;">エラーが発生しました:\n${errorDetails}</pre>`;
     }
+}
+
+async function createSpreadsheetInFolder(title, folderId) {
+    const resource = {
+        name: title,
+        mimeType: 'application/vnd.google-apps.spreadsheet'
+    };
+    if (folderId && folderId !== '') {
+        resource.parents = [folderId];
+    }
+
+    const response = await gapi.client.drive.files.create({
+        resource: resource,
+        fields: 'id, webViewLink'
+    });
+    return response.result.id;
+}
+
+function getColumnLetter(colIndex) {
+    let temp, letter = '';
+    while (colIndex > 0) {
+        temp = (colIndex - 1) % 26;
+        letter = String.fromCharCode(temp + 65) + letter;
+        colIndex = (colIndex - temp - 1) / 26;
+    }
+    return letter;
 }
