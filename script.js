@@ -1,5 +1,5 @@
 // ==========================================
-// 0. パスワード認証
+// 1. パスワード認証
 // ==========================================
 function checkPassword() {
     const inputVal = document.getElementById('password_input').value;
@@ -350,6 +350,9 @@ async function createNewSheet() {
             }
         });
 
+        // ----------------------------------------------------
+        // 「備品」シートの処理（安全対策版）
+        // ----------------------------------------------------
         let bibinCopied = false;
         if (dataRows.length > 0 && dataRows[0][1]) {
             const prevUrl = dataRows[0][1];
@@ -376,6 +379,7 @@ async function createNewSheet() {
             }
         }
 
+        // コピーできなかった場合は新規に「備品」シートを作成する
         if (!bibinCopied) {
             await gapi.client.sheets.spreadsheets.batchUpdate({
                 spreadsheetId: newSheetId,
@@ -389,15 +393,26 @@ async function createNewSheet() {
             });
         }
 
-        // コピー成功・失敗に関わらず、必ず備品シートの1行目に見出しを設定する
-        await gapi.client.sheets.spreadsheets.values.update({
-            spreadsheetId: newSheetId,
-            range: '備品!A1:E1',
-            valueInputOption: 'USER_ENTERED',
-            resource: {
-                values: [['取得年', '備品名', '製造所', '仕様形式', '備考']]
-            }
-        });
+        // ★追加・確実な対策: 作成またはコピーが完了したスプレッドシートの構造を再取得して「備品」が存在することを確認してから見出しを入れる
+        let bibinExists = false;
+        try {
+            const checkSpInfo = await gapi.client.sheets.spreadsheets.get({ spreadsheetId: newSheetId });
+            bibinExists = checkSpInfo.result.sheets.some(s => s.properties.title === '備品');
+        } catch (e) {
+            console.warn('シート構造の確認に失敗しました', e);
+        }
+
+        if (bibinExists) {
+            await gapi.client.sheets.spreadsheets.values.update({
+                spreadsheetId: newSheetId,
+                range: '備品!A1:E1',
+                valueInputOption: 'USER_ENTERED',
+                resource: {
+                    values: [['取得年', '備品名', '製造所', '仕様形式', '備考']]
+                }
+            });
+        }
+        // ----------------------------------------------------
 
         let batchValueData = [];
 
