@@ -335,27 +335,23 @@ async function createNewSheet() {
         });
 
         // 7. 「活動実績・予定」シートの構築
-        // A列：12月〜11月 (12, 1, 2, ..., 10, 11) -> 1行開けて上から記入
-        const monthsA = [12, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11];
-        let monthValuesA = [];
-        for (let m = 0; m < monthsA.length; m++) {
-            monthValuesA.push([monthsA[m]]);
-        }
-        userSheetsBatchData.push({
-            range: '活動実績・予定!A2:A13',
-            values: monthValuesA
-        });
+　　　　// A列：12月〜11月 (12月, 1月, 2月, ..., 10月, 11月)
+　　　　const monthsA = [12, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11];
+　　　　let monthValuesA = monthsA.map(m => [`${m}月`]);
 
-        // C列：4月〜3月 (4, 5, 6, ..., 2, 3) -> 1行開けて上から記入
-        const monthsC = [4, 5, 6, 7, 8, 9, 10, 11, 12, 1, 2, 3];
-        let monthValuesC = [];
-        for (let m = 0; m < monthsC.length; m++) {
-            monthValuesC.push([monthsC[m]]);
-        }
-        userSheetsBatchData.push({
-            range: '活動実績・予定!C2:C13',
-            values: monthValuesC
-        });
+　　　　userSheetsBatchData.push({
+ 　　　　   range: '活動実績・予定!A2:A13',
+   　　　　 values: monthValuesA
+　　　　});
+
+　　　　// C列：4月〜3月 (4月, 5月, 6月, ..., 2月, 3月)
+　　　　const monthsC = [4, 5, 6, 7, 8, 9, 10, 11, 12, 1, 2, 3];
+　　　　let monthValuesC = monthsC.map(m => [`${m}月`]);
+
+　　　　userSheetsBatchData.push({
+  　　　　  range: '活動実績・予定!C2:C13',
+　　　　    values: monthValuesC
+　　　　});
 
         // 8. 「備品」シートの構築
         userSheetsBatchData.push({
