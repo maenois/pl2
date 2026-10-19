@@ -42,7 +42,8 @@ h1 {
     font-size: 14px;
 }
 
-.input-group input[type="text"] {
+.input-group input[type="text"],
+.input-group input[type="password"] {
     width: 100%;
     padding: 8px 12px;
     box-sizing: border-box;
