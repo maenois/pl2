@@ -1,35 +1,34 @@
 body {
-    font-family: Arial, sans-serif;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
     background-color: #f4f6f9;
-    margin: 0;
-    padding: 20px;
     color: #333;
+    margin: 0;
+    padding: 40px;
+    display: flex;
+    justify-content: center;
 }
 
 .container {
-    max-width: 650px;
-    margin: 40px auto;
     background: #ffffff;
     padding: 30px;
     border-radius: 8px;
-    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    width: 100%;
+    max-width: 500px;
 }
 
 h1 {
-    font-size: 1.4rem;
+    font-size: 20px;
     margin-bottom: 20px;
+    color: #1a73e8;
 }
 
-.button-group {
-    margin-bottom: 20px;
-}
-
-.form-section {
+.folder-box {
     background: #f8f9fa;
-    padding: 15px;
+    padding: 12px;
     border-radius: 6px;
-    border: 1px solid #e1e4e8;
     margin-bottom: 20px;
+    border: 1px solid #dee2e6;
 }
 
 .input-group {
@@ -38,87 +37,70 @@ h1 {
 
 .input-group label {
     display: block;
-    font-size: 13px;
     font-weight: bold;
     margin-bottom: 5px;
-}
-
-.folder-select-box {
-    display: flex;
-    align-items: center;
-    background: #fff;
-    border: 1px solid #ccc;
-    padding: 6px 10px;
-    border-radius: 4px;
-}
-
-#selected_folder_name {
-    flex-grow: 1;
     font-size: 14px;
-    color: #555;
 }
 
 .input-group input[type="text"] {
     width: 100%;
-    padding: 8px;
-    font-size: 14px;
+    padding: 8px 12px;
+    box-sizing: border-box;
     border: 1px solid #ccc;
     border-radius: 4px;
-    box-sizing: border-box;
-    margin-bottom: 10px;
+    font-size: 14px;
+}
+
+.input-group small {
+    color: #666;
+    font-size: 12px;
 }
 
 button {
-    background-color: #5f6368;
-    color: white;
-    border: none;
-    padding: 8px 14px;
-    font-size: 13px;
+    padding: 8px 16px;
+    background-color: #f8f9fa;
+    border: 1px solid #ccc;
     border-radius: 4px;
     cursor: pointer;
+    font-size: 14px;
 }
 
 button:hover {
-    background-color: #3c4043;
+    background-color: #e2e6ea;
 }
 
 .primary-btn {
     background-color: #1a73e8;
+    color: white;
+    border: none;
+    padding: 10px 20px;
+    font-weight: bold;
     width: 100%;
-    padding: 10px;
-    font-size: 14px;
+    margin-top: 10px;
 }
 
 .primary-btn:hover {
     background-color: #1557b0;
 }
 
-#signout_button {
-    background-color: #d93025;
+#content {
+    margin-top: 20px;
+    font-size: 14px;
 }
 
-#signout_button:hover {
-    background-color: #a50e0e;
+#links {
+    margin-top: 15px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
 }
 
-.output-box {
-    background: #f1f3f4;
-    padding: 15px;
-    border-radius: 4px;
-    white-space: pre-wrap;
-    word-wrap: break-word;
-    min-height: 40px;
-    margin-bottom: 15px;
-}
-
-.links-box a {
-    display: block;
+#links a {
     color: #1a73e8;
     text-decoration: none;
-    margin-bottom: 8px;
-    font-weight: bold;
+    font-size: 14px;
 }
 
-.links-box a:hover {
+#links a:hover {
     text-decoration: underline;
 }
