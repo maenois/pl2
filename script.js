@@ -140,6 +140,7 @@ async function createSpreadsheetInFolder(title, folderId) {
 }
 
 // 新規シート作成＆ログ記録のメイン処理
+// 新規シート作成＆ログ記録のメイン処理（最新が一番上にくるように保存）
 async function createNewSheet() {
     try {
         const targetFolderId = localStorage.getItem('app_target_folder_id') || '';
@@ -149,6 +150,7 @@ async function createNewSheet() {
 
         let logSheetId = localStorage.getItem('app_log_sheet_id');
 
+        // 1. ログ管理シートがまだなければ新規作成してヘッダーを設定
         if (!logSheetId) {
             logSheetId = await createSpreadsheetInFolder('アプリ用ログ管理シート', targetFolderId);
             localStorage.setItem('app_log_sheet_id', logSheetId);
@@ -156,7 +158,7 @@ async function createNewSheet() {
             const spreadsheetInfo = await gapi.client.sheets.spreadsheets.get({ spreadsheetId: logSheetId });
             const firstSheetName = spreadsheetInfo.result.sheets[0].properties.title;
 
-            await gapi.client.sheets.spreadsheets.values.append({
+            await gapi.client.sheets.spreadsheets.values.update({
                 spreadsheetId: logSheetId,
                 range: `${firstSheetName}!A1`,
                 valueInputOption: 'USER_ENTERED',
@@ -168,25 +170,38 @@ async function createNewSheet() {
 
         document.getElementById('content').innerHTML = `<p>「${newSheetTitle}」を作成中...</p>`;
 
+        // 2. 新しいカスタムシートを作成
         const newSheetId = await createSpreadsheetInFolder(newSheetTitle, targetFolderId);
         const newSheetUrl = `https://docs.google.com/spreadsheets/d/${newSheetId}/edit`;
 
         const logSpreadsheetInfo = await gapi.client.sheets.spreadsheets.get({ spreadsheetId: logSheetId });
         const logFirstSheetName = logSpreadsheetInfo.result.sheets[0].properties.title;
 
-        await gapi.client.sheets.spreadsheets.values.append({
+        // 3. 既存のログデータを取得して、一番上に新しい行を差し込む
+        const getResp = await gapi.client.sheets.spreadsheets.values.get({
+            spreadsheetId: logSheetId,
+            range: `${logFirstSheetName}!A:C`
+        });
+
+        let rows = getResp.result.values || [];
+        const header = rows.length > 0 ? rows[0] : ['シート名', 'スプレッドシートURL', '作成日時'];
+        const dataRows = rows.length > 1 ? rows.slice(1) : [];
+
+        // 新しいデータを先頭（一番上）に追加
+        dataRows.unshift([newSheetTitle, newSheetUrl, new Date().toLocaleString()]);
+
+        // ヘッダーと新しいデータを合わせて上書き保存
+        await gapi.client.sheets.spreadsheets.values.update({
             spreadsheetId: logSheetId,
             range: `${logFirstSheetName}!A1`,
             valueInputOption: 'USER_ENTERED',
             resource: {
-                values: [
-                    [newSheetTitle, newSheetUrl, new Date().toLocaleString()]
-                ]
+                values: [header, ...dataRows]
             }
         });
 
         document.getElementById('content').innerText = 
-            `処理が完了しました！\n新しいシートを作成し、ログに追加しました。`;
+            `処理が完了しました！\n新しいシートを作成し、ログの先頭に追加しました。`;
 
         const linksDiv = document.getElementById('links');
         linksDiv.innerHTML = `
