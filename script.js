@@ -1,5 +1,5 @@
 // ==========================================
-// 0. パスワード認証
+// 1. パスワード認証
 // ==========================================
 function checkPassword() {
     const inputVal = document.getElementById('password_input').value;
