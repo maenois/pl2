@@ -61,21 +61,12 @@ button {
 }
 
 button:hover {
-    opacity: 0.9;
+    opacity: 0.85;
 }
 
-.btn-green { background-color: #107c41; }
+/* 青色統一テーマ */
 .btn-blue { background-color: #185abc; }
-.btn-google { background-color: #4285F4; }
 .btn-danger { background-color: #e74c3c; }
-
-.btn-back {
-    background-color: #7f8c8d;
-    float: left;
-    margin-bottom: 15px;
-    padding: 6px 12px;
-    font-size: 14px;
-}
 
 .error-text {
     color: #e74c3c;
@@ -89,18 +80,6 @@ button:hover {
     border-radius: 6px;
     margin-bottom: 20px;
     border: 1px solid #eaeaea;
-}
-
-.folder-select-area {
-    margin-bottom: 15px;
-}
-
-#selected_folder_name {
-    display: block;
-    margin-top: 8px;
-    font-size: 14px;
-    color: #666;
-    font-weight: bold;
 }
 
 .login-actions {
@@ -126,12 +105,80 @@ hr {
     text-align: left;
 }
 
+/* 階層型フォルダブラウザのスタイル */
+.folder-browser-box {
+    border: 1px solid #dcdcdc;
+    background: #fafafa;
+    padding: 15px;
+    border-radius: 6px;
+}
+
+.breadcrumb-trail {
+    background: #fff;
+    padding: 8px 12px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    margin: 8px 0;
+    font-size: 14px;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 5px;
+}
+
+.breadcrumb-item {
+    color: #185abc;
+    cursor: pointer;
+    text-decoration: underline;
+}
+
+.breadcrumb-item:hover {
+    color: #0d3b8c;
+}
+
+.folder-list-box {
+    background: #fff;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    height: 150px;
+    overflow-y: auto;
+    padding: 5px;
+    margin-bottom: 10px;
+}
+
+.folder-item {
+    padding: 8px 10px;
+    cursor: pointer;
+    border-bottom: 1px solid #f0f0f0;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 14px;
+    border-radius: 3px;
+}
+
+.folder-item:hover {
+    background-color: #e8f0fe;
+}
+
+.selected-folder-action {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+}
+
+.target-display {
+    font-size: 13px;
+    color: #185abc;
+    font-weight: bold;
+    word-break: break-all;
+}
+
 .hello-world-text {
     font-size: 48px;
     color: #2c3e50;
     text-align: center;
     margin: 40px 0 10px 0;
-    clear: both;
 }
 
 .sub-text {
@@ -143,6 +190,7 @@ hr {
 .content-msg {
     margin-top: 15px;
     font-weight: bold;
+    text-align: center;
 }
 
 .links-area {
