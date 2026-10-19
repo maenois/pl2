@@ -19,7 +19,9 @@ function checkPassword() {
 const CLIENT_ID = '893360002885-juvu8vp11q6si42ebojo4i483vd3sqkl.apps.googleusercontent.com';
 const API_KEY = 'AIzaSyDKcb8Ztk9C_zs5oTbNSAcSbXmyNyUEM8Q'; // Google Cloud Consoleで発行した「APIキー」を入れてください
 const APP_ID = '893360002885'; // プロジェクト番号（数値）
-const SCOPES = 'https://www.googleapis.com/auth/spreadsheets https://www.googleapis.com/auth/drive.file';
+
+// 既存フォルダを一覧表示するため drive.readonly（または drive）スコープを追加
+const SCOPES = 'https://www.googleapis.com/auth/spreadsheets https://www.googleapis.com/auth/drive.file https://www.googleapis.com/auth/drive.readonly';
 const DISCOVERY_DOCS = [
     'https://sheets.googleapis.com/$discovery/rest?version=v4',
     'https://www.googleapis.com/discovery/v1/apis/drive/v3/rest'
@@ -113,6 +115,7 @@ function switchView(viewName) {
         document.getElementById('view_menu').style.display = 'block';
     } else if (viewName === 'spreadsheet') {
         document.getElementById('view_spreadsheet').style.display = 'block';
+        // スプレッドシート画面が開いたときにルートフォルダの一覧を読み込む
         loadFolderContent('root', 'マイドライブ');
     } else if (viewName === 'word') {
         document.getElementById('view_word').style.display = 'block';
@@ -142,6 +145,7 @@ async function loadFolderContent(folderId, folderName) {
                 const item = document.createElement('div');
                 item.className = 'folder-item';
                 item.innerHTML = `📁 ${folder.name}`;
+                // クリックでそのフォルダの中へ移動
                 item.onclick = () => {
                     currentFolderStack.push({ id: folder.id, name: folder.name });
                     updateBreadcrumb();
@@ -150,12 +154,12 @@ async function loadFolderContent(folderId, folderName) {
                 listContainer.appendChild(item);
             });
         } else {
-            listContainer.innerHTML = '<p style="color: #888; font-size: 13px; text-align: center; padding-top: 20px;">サブフォルダはありません</p>';
+            listContainer.innerHTML = '<p style="color: #888; font-size: 13px; text-align: center; padding-top: 25px;">サブフォルダはありません</p>';
         }
 
     } catch (err) {
         console.error('フォルダの取得に失敗しました', err);
-        listContainer.innerHTML = '<p style="color: red; font-size: 13px; text-align: center;">フォルダの取得に失敗しました</p>';
+        listContainer.innerHTML = '<p style="color: red; font-size: 13px; text-align: center; padding-top: 25px;">フォルダの取得に失敗しました</p>';
     }
 }
 
