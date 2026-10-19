@@ -1,5 +1,5 @@
 // ==========================================
-// 1. パスワード認証
+// 0. パスワード認証
 // ==========================================
 function checkPassword() {
     const inputVal = document.getElementById('password_input').value;
@@ -387,16 +387,17 @@ async function createNewSheet() {
                     }]
                 }
             });
-
-            await gapi.client.sheets.spreadsheets.values.update({
-                spreadsheetId: newSheetId,
-                range: '備品!A1:E1',
-                valueInputOption: 'USER_ENTERED',
-                resource: {
-                    values: [['取得年', '備品名', '製造所', '仕様形式', '備考']]
-                }
-            });
         }
+
+        // コピー成功・失敗に関わらず、必ず備品シートの1行目に見出しを設定する
+        await gapi.client.sheets.spreadsheets.values.update({
+            spreadsheetId: newSheetId,
+            range: '備品!A1:E1',
+            valueInputOption: 'USER_ENTERED',
+            resource: {
+                values: [['取得年', '備品名', '製造所', '仕様形式', '備考']]
+            }
+        });
 
         let batchValueData = [];
 
