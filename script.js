@@ -15,6 +15,9 @@ let ginisInited = false;
 let pickerInited = false;
 let accessToken = null;
 
+// ==========================================
+// 2. 初期化と認証関連
+// ==========================================
 function gapiLoaded() {
     gapi.load('client', initializeGapiClient);
     gapi.load('picker', () => { pickerInited = true; });
@@ -59,7 +62,7 @@ function onLoginSuccess() {
     document.getElementById('authorize_button').style.display = 'none';
     document.getElementById('app_section').style.display = 'block';
     
-    // 保存されているフォルダ名・IDがあれば復元
+    // 保存されているフォルダ名があれば復元
     const savedName = localStorage.getItem('app_target_folder_name');
     if (savedName) {
         document.getElementById('selected_folder_name').innerText = savedName;
@@ -83,14 +86,15 @@ function handleSignoutClick() {
     }
 }
 
-// Google Picker（フォルダ選択ウィンドウ）を開く関数
+// ==========================================
+// 3. Google Picker（フォルダ選択ウィンドウ）
+// ==========================================
 function openFolderPicker() {
     if (!pickerInited || !accessToken) {
         alert('Google APIの初期化中または未ログインです。');
         return;
     }
 
-    // フォルダのみを選択できるビューを設定
     const view = new google.picker.DocsView(google.picker.ViewId.FOLDERS)
         .setSelectFolderEnabled(true)
         .setMimeTypes('application/vnd.google-apps.folder');
@@ -107,14 +111,12 @@ function openFolderPicker() {
     picker.setVisible(true);
 }
 
-// フォルダが選択されたときのコールバック
 function pickerCallback(data) {
     if (data[google.picker.Response.ACTION] == google.picker.Action.PICKED) {
         const doc = data[google.picker.Response.DOCUMENTS][0];
         const folderId = doc[google.picker.Document.ID];
         const folderName = doc[google.picker.Document.NAME];
 
-        // 選択されたフォルダ情報を保存
         localStorage.setItem('app_target_folder_id', folderId);
         localStorage.setItem('app_target_folder_name', folderName);
 
@@ -122,7 +124,9 @@ function pickerCallback(data) {
     }
 }
 
-// フォルダを指定してスプレッドシートを作成するヘルパー
+// ==========================================
+// 4. スプレッドシート作成・ログ管理のメイン処理
+// ==========================================
 async function createSpreadsheetInFolder(title, folderId) {
     const resource = {
         name: title,
@@ -134,13 +138,11 @@ async function createSpreadsheetInFolder(title, folderId) {
 
     const response = await gapi.client.drive.files.create({
         resource: resource,
-        fields: 'id, webViewLink' // ここを修正しました
+        fields: 'id, webViewLink'
     });
     return response.result.id;
 }
 
-// 新規シート作成＆ログ記録のメイン処理
-// 新規シート作成＆ログ記録のメイン処理（最新が一番上にくるように保存）
 async function createNewSheet() {
     try {
         const targetFolderId = localStorage.getItem('app_target_folder_id') || '';
@@ -150,7 +152,7 @@ async function createNewSheet() {
 
         let logSheetId = localStorage.getItem('app_log_sheet_id');
 
-        // 1. ログ管理シートがまだなければ新規作成してヘッダーを設定
+        // ログ管理シートがなければ新規作成してヘッダーを設定
         if (!logSheetId) {
             logSheetId = await createSpreadsheetInFolder('アプリ用ログ管理シート', targetFolderId);
             localStorage.setItem('app_log_sheet_id', logSheetId);
@@ -170,14 +172,14 @@ async function createNewSheet() {
 
         document.getElementById('content').innerHTML = `<p>「${newSheetTitle}」を作成中...</p>`;
 
-        // 2. 新しいカスタムシートを作成
+        // 新しいカスタムシートを作成
         const newSheetId = await createSpreadsheetInFolder(newSheetTitle, targetFolderId);
         const newSheetUrl = `https://docs.google.com/spreadsheets/d/${newSheetId}/edit`;
 
         const logSpreadsheetInfo = await gapi.client.sheets.spreadsheets.get({ spreadsheetId: logSheetId });
         const logFirstSheetName = logSpreadsheetInfo.result.sheets[0].properties.title;
 
-        // 3. 既存のログデータを取得して、一番上に新しい行を差し込む
+        // 既存のログデータを取得して、一番上に新しい行を差し込む
         const getResp = await gapi.client.sheets.spreadsheets.values.get({
             spreadsheetId: logSheetId,
             range: `${logFirstSheetName}!A:C`
