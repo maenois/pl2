@@ -221,3 +221,82 @@ async function createNewSheet() {
         document.getElementById('content').innerHTML = `<pre style="color: red; text-align: left; font-size: 12px; background: #fff; padding: 10px; border: 1px solid #ccc;">エラーが発生しました:\n${errorDetails}</pre>`;
     }
 }
+// ログ管理シートに記録されているスプレッドシートのファイル名を、Googleドライブの最新情報に同期する関数
+async function syncLogSheetNames() {
+    try {
+        const logSheetId = localStorage.getItem('app_log_sheet_id');
+        if (!logSheetId) {
+            alert('ログ管理シートが見つかりません。');
+            return;
+        }
+
+        document.getElementById('content').innerHTML = '<p>スプレッドシートの最新ファイル名を確認・同期中...</p>';
+
+        const logSpreadsheetInfo = await gapi.client.sheets.spreadsheets.get({ spreadsheetId: logSheetId });
+        const logFirstSheetName = logSpreadsheetInfo.result.sheets[0].properties.title;
+
+        // ログデータを取得
+        const getResp = await gapi.client.sheets.spreadsheets.values.get({
+            spreadsheetId: logSheetId,
+            range: `${logFirstSheetName}!A:C`
+        });
+
+        let rows = getResp.result.values || [];
+        if (rows.length <= 1) {
+            document.getElementById('content').innerHTML = '<p>同期するログデータがまだありません。</p>';
+            return;
+        }
+
+        const header = rows[0];
+        let updatedCount = 0;
+
+        // 2行目（データ行）以降をループして、現在のファイル名をチェック
+        for (let i = 1; i < rows.length; i++) {
+            const currentName = rows[i][0];
+            const url = rows[i][1];
+            
+            if (url) {
+                // URLからスプレッドシートIDを抽出 (https://docs.google.com/spreadsheets/d/XXX/edit)
+                const match = url.match(/\/d\/([a-zA-Z0-9-_]+)/);
+                if (match && match[1]) {
+                    const sheetId = match[1];
+                    try {
+                        // Googleドライブから現在の最新ファイル名を取得
+                        const fileResp = await gapi.client.drive.files.get({
+                            fileId: sheetId,
+                            fields: 'name'
+                        });
+                        const latestName = fileResp.result.name;
+
+                        // 名前が変わっていれば更新
+                        if (currentName !== latestName) {
+                            rows[i][0] = latestName;
+                            updatedCount++;
+                        }
+                    } catch (e) {
+                        console.warn(`ID ${sheetId} のファイル名取得に失敗しました`, e);
+                    }
+                }
+            }
+        }
+
+        // 変更があった場合のみログシートを上書き保存
+        if (updatedCount > 0) {
+            await gapi.client.sheets.spreadsheets.values.update({
+                spreadsheetId: logSheetId,
+                range: `${logFirstSheetName}!A1`,
+                valueInputOption: 'USER_ENTERED',
+                resource: {
+                    values: rows
+                }
+            });
+            document.getElementById('content').innerHTML = `<p>同期完了！ ${updatedCount}件のファイル名変更をログに反映しました。</p>`;
+        } else {
+            document.getElementById('content').innerHTML = '<p>変更されたファイル名はありませんでした（すべて最新です）。</p>';
+        }
+
+    } catch (err) {
+        console.error('同期エラー:', err);
+        document.getElementById('content').innerHTML = `<p style="color: red;">同期中にエラーが発生しました。</p>`;
+    }
+}
