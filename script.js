@@ -1,5 +1,5 @@
 // ==========================================
-// 2. パスワード認証
+// 0. パスワード認証
 // ==========================================
 function checkPassword() {
     const inputVal = document.getElementById('password_input').value;
@@ -400,7 +400,6 @@ async function createNewSheet() {
                         const prevBibinSheet = prevSpInfo.result.sheets.find(s => s.properties.title === '備品');
 
                         if (prevBibinSheet) {
-                            // シートをコピー
                             const copyRes = await gapi.client.sheets.spreadsheets.sheets.copyTo({
                                 spreadsheetId: prevSheetId,
                                 sheetId: prevBibinSheet.properties.sheetId,
@@ -409,7 +408,6 @@ async function createNewSheet() {
                                 }
                             });
                             
-                            // コピーされると「備品のコピー」になるため、シートIDを指定して「備品」にリネーム
                             const copiedSheetId = copyRes.result.sheetId;
                             await gapi.client.sheets.spreadsheets.batchUpdate({
                                 spreadsheetId: newSheetId,
@@ -436,7 +434,6 @@ async function createNewSheet() {
             }
         }
 
-        // 過去の備品シートが見つからなかった場合は新規作成
         if (!bibinCopied) {
             await gapi.client.sheets.spreadsheets.batchUpdate({
                 spreadsheetId: newSheetId,
@@ -618,4 +615,25 @@ async function createNewSheet() {
 async function createSpreadsheetInFolder(title, folderId) {
     const resource = {
         name: title,
-        mimeType: 'application/
+        mimeType: 'application/vnd.google-apps.spreadsheet'
+    };
+    if (folderId && folderId !== 'root' && folderId !== '') {
+        resource.parents = [folderId];
+    }
+
+    const response = await gapi.client.drive.files.create({
+        resource: resource,
+        fields: 'id, webViewLink'
+    });
+    return response.result.id;
+}
+
+function getColumnLetter(colIndex) {
+    let temp, letter = '';
+    while (colIndex > 0) {
+        temp = (colIndex - 1) % 26;
+        letter = String.fromCharCode(temp + 65) + letter;
+        colIndex = (colIndex - temp - 1) / 26;
+    }
+    return letter;
+}
