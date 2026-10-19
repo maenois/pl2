@@ -10,37 +10,50 @@
     <div class="container">
         <h1>スプレッドシート自動作成ツール</h1>
 
-        <!-- ログイン・ログアウトボタン -->
-        <div id="auth_section">
-            <button id="authorize_button" onclick="handleAuthClick()" style="display: none;">Googleアカウントでログイン</button>
-            <button id="signout_button" onclick="handleSignoutClick()" style="display: none;">ログアウト</button>
+        <!-- パスワード認証画面 -->
+        <div id="password_section">
+            <div class="input-group">
+                <label for="password_input">パスワードを入力してください:</label>
+                <input type="password" id="password_input" placeholder="パスワードを入力">
+            </div>
+            <button class="primary-btn" onclick="checkPassword()">認証する</button>
+            <p id="password_error" style="color: red; font-size: 12px; margin-top: 10px;"></p>
         </div>
 
-        <!-- ログイン後に表示されるメイン操作エリア -->
-        <div id="app_section" style="display: none;">
-            <div class="folder-box">
-                <p>保存先フォルダ: <span id="selected_folder_name">未選択</span></p>
-                <button onclick="openFolderPicker()">フォルダを変更</button>
+        <!-- 認証後に表示されるメインエリア（初期は非表示） -->
+        <div id="main_app_content" style="display: none;">
+            <!-- ログイン・ログアウトボタン -->
+            <div id="auth_section">
+                <button id="authorize_button" onclick="handleAuthClick()" style="display: none;">Googleアカウントでログイン</button>
+                <button id="signout_button" onclick="handleSignoutClick()" style="display: none;">ログアウト</button>
             </div>
 
-            <div class="input-group">
-                <label for="sheet_title_input">スプレッドシート自体の名前:</label>
-                <input type="text" id="sheet_title_input" value="マイカスタムデータ">
+            <!-- ログイン後に表示されるメイン操作エリア -->
+            <div id="app_section" style="display: none;">
+                <div class="folder-box">
+                    <p>保存先フォルダ: <span id="selected_folder_name">未選択</span></p>
+                    <button onclick="openFolderPicker()">フォルダを変更</button>
+                </div>
+
+                <div class="input-group">
+                    <label for="sheet_title_input">スプレッドシート自体の名前:</label>
+                    <input type="text" id="sheet_title_input" value="マイカスタムデータ">
+                </div>
+
+                <div class="input-group">
+                    <label for="sheet_names_input">作るシート（タブ）の名前（カンマ区切り）:</label>
+                    <input type="text" id="sheet_names_input" value="集計用, データA, データB">
+                    <small>例: 集計用, データA, データB と入力すると3つのタブが同時に作られます</small>
+                </div>
+
+                <button class="primary-btn" onclick="createNewSheet()">スプレッドシートを作成</button>
+
+                <!-- 処理状況やメッセージが表示される場所 -->
+                <div id="content"></div>
+
+                <!-- 作成したシートへのリンクが表示される場所 -->
+                <div id="links"></div>
             </div>
-
-            <div class="input-group">
-                <label for="sheet_names_input">作るシート（タブ）の名前（カンマ区切り）:</label>
-                <input type="text" id="sheet_names_input" value="集計用, データA, データB">
-                <small>例: 集計用, データA, データB と入力すると3つのタブが同時に作られます</small>
-            </div>
-
-            <button class="primary-btn" onclick="createNewSheet()">スプレッドシートを作成</button>
-
-            <!-- 処理状況やメッセージが表示される場所 -->
-            <div id="content"></div>
-
-            <!-- 作成したシートへのリンクが表示される場所 -->
-            <div id="links"></div>
         </div>
     </div>
 
@@ -48,7 +61,7 @@
     <script async defer src="https://apis.google.com/js/api.js" onload="gapiLoaded()"></script>
     <script async defer src="https://accounts.google.com/gsi/client" onload="gisLoaded()"></script>
     
-    <!-- 先ほど作った script.js を読み込む -->
+    <!-- スクリプトの読み込み -->
     <script src="script.js"></script>
 </body>
 </html>
