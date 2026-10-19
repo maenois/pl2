@@ -1,5 +1,5 @@
 // ==========================================
-// 1. 設定エリア（ご自身の情報に書き換えてください）
+// 2. 設定エリア（ご自身の情報に書き換えてください）
 // ==========================================
 const CLIENT_ID = '893360002885-juvu8vp11q6si42ebojo4i483vd3sqkl.apps.googleusercontent.com';
 const API_KEY = 'AIzaSyDKcb8Ztk9C_zs5oTbNSAcSbXmyNyUEM8Q'; // Google Cloud Consoleで発行した「APIキー」を入れてください
@@ -146,14 +146,14 @@ async function createSpreadsheetInFolder(title, folderId) {
 }
 
 // ==========================================
-// 5. 新規シート作成 ＆ B列リンク巡回による名前自動同期のメイン処理
+// 5. 新規シート作成 ＆ リンク巡回（名前自動更新 ＆ 削除済みシートの自動除外）のメイン処理
 // ==========================================
 async function createNewSheet() {
     try {
         const targetFolderId = localStorage.getItem('app_target_folder_id') || '';
         const newSheetTitle = document.getElementById('sheet_title_input').value.trim() || 'カスタムデータシート';
 
-        document.getElementById('content').innerHTML = '<p>既存のシート名を確認・同期中...</p>';
+        document.getElementById('content').innerHTML = '<p>既存のシート状態を確認・同期中...</p>';
 
         let logSheetId = localStorage.getItem('app_log_sheet_id');
 
@@ -178,7 +178,7 @@ async function createNewSheet() {
         const logSpreadsheetInfo = await gapi.client.sheets.spreadsheets.get({ spreadsheetId: logSheetId });
         const logFirstSheetName = logSpreadsheetInfo.result.sheets[0].properties.title;
 
-        // 2. サーバースプシの全データを取得し、B列のリンクをすべて巡回してA列を最新に直す
+        // 2. サーバースプシの全データを取得
         const getResp = await gapi.client.sheets.spreadsheets.values.get({
             spreadsheetId: logSheetId,
             range: `${logFirstSheetName}!A:C`
@@ -188,7 +188,8 @@ async function createNewSheet() {
         const header = rows.length > 0 ? rows[0] : ['シート名', 'スプレッドシートURL', '作成日時'];
         let dataRows = rows.length > 1 ? rows.slice(1) : [];
 
-        // B列のリンクをチェックしてA列の名前を最新にアップデート
+        // 3. B列のリンクをすべて巡回チェック
+        let validDataRows = [];
         for (let i = 0; i < dataRows.length; i++) {
             const url = dataRows[i][1]; // B列（URL）
             if (url) {
@@ -196,14 +197,20 @@ async function createNewSheet() {
                 if (match && match[1]) {
                     const sheetId = match[1];
                     try {
+                        // ドライブからファイル情報を取得
                         const fileResp = await gapi.client.drive.files.get({
                             fileId: sheetId,
-                            fields: 'name'
+                            fields: 'name, trashed'
                         });
-                        const latestName = fileResp.result.name;
-                        dataRows[i][0] = latestName; // A列を現在の最新名に更新
+
+                        // ファイルが生きていて、ゴミ箱に入っていない場合のみ残す
+                        if (fileResp && fileResp.result && !fileResp.result.trashed) {
+                            dataRows[i][0] = fileResp.result.name; // 最新の名前に更新
+                            validDataRows.push(dataRows[i]); // 生きているデータとして保持
+                        }
                     } catch (e) {
-                        console.warn(`ID ${sheetId} の名前取得に失敗しました`, e);
+                        // 404エラーなどでファイルが見つからない（削除された）場合は validDataRows に入れない（＝サーバーのログからも消える）
+                        console.warn(`ID ${sheetId} は削除されたか見つからないためログから除外します`, e);
                     }
                 }
             }
@@ -211,25 +218,25 @@ async function createNewSheet() {
 
         document.getElementById('content').innerHTML = `<p>「${newSheetTitle}」を作成中...</p>`;
 
-        // 3. 新しいカスタムシートを作成
+        // 4. 新しいカスタムシートを作成
         const newSheetId = await createSpreadsheetInFolder(newSheetTitle, targetFolderId);
         const newSheetUrl = `https://docs.google.com/spreadsheets/d/${newSheetId}/edit`;
 
         // 新しいデータを一番上（先頭）に追加
-        dataRows.unshift([newSheetTitle, newSheetUrl, new Date().toLocaleString()]);
+        validDataRows.unshift([newSheetTitle, newSheetUrl, new Date().toLocaleString()]);
 
-        // 4. 更新したすべてのデータをサーバースプシに書き戻す
+        // 5. 更新・整理したデータをサーバースプシに書き戻す
         await gapi.client.sheets.spreadsheets.values.update({
             spreadsheetId: logSheetId,
             range: `${logFirstSheetName}!A1`,
             valueInputOption: 'USER_ENTERED',
             resource: {
-                values: [header, ...dataRows]
+                values: [header, ...validDataRows]
             }
         });
 
         document.getElementById('content').innerText = 
-            `処理完了！\nすべてのリンクを確認して名前を同期し、新しいシートを追加しました。`;
+            `処理完了！\n削除されたシートの自動整理、名前の同期を行い、新しいシートを追加しました。`;
 
         const linksDiv = document.getElementById('links');
         linksDiv.innerHTML = `
