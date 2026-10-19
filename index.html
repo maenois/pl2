@@ -3,29 +3,28 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>画面遷移テスト用アプリ</title>
+    <title>自動生成ツール</title>
     <link rel="stylesheet" href="style.css">
     <!-- Google API & Google Identity Services の読み込み -->
     <script async defer src="https://apis.google.com/js/api.js" onload="gapiLoaded()"></script>
     <script async defer src="https://accounts.google.com/gsi/client" onload="gisLoaded()"></script>
-    <!-- Google Picker API の読み込み -->
     <script type="text/javascript" src="https://apis.google.com/js/picker.js"></script>
 </head>
 <body>
 
     <div class="container">
-        <!-- パスワード認証セクション -->
+        <!-- 0. パスワード認証セクション -->
         <div id="password_section" class="card">
             <h2>パスワード認証</h2>
-            <p>利用するにはパスワードを入力してください（初期値: 1202）。</p>
+            <p>利用するにはパスワードを入力してください。</p>
             <input type="password" id="password_input" placeholder="パスワード">
             <button onclick="checkPassword()">ログイン</button>
             <p id="password_error" class="error-text"></p>
         </div>
 
-        <!-- メインアプリセクション（初期状態は非表示） -->
+        <!-- メインアプリセクション -->
         <div id="main_app_content" class="card" style="display: none;">
-            <h2>ファイル自動生成システム</h2>
+            <h2>自動生成システム</h2>
 
             <!-- フォルダ選択＆Googleログインエリア -->
             <div class="auth-box">
@@ -42,15 +41,49 @@
 
             <hr>
 
-            <!-- アプリのコンテンツ表示・操作エリア（メニューやフォームがここに切り替わります） -->
+            <!-- 各画面コンテナ（JavaScriptで表示を切り替えます） -->
             <div id="app_section" style="display: none;">
-                <div id="content"></div>
+
+                <!-- ① メニュー選択画面 -->
+                <div id="view_menu" class="view-screen">
+                    <h3>作成するファイルの種類を選んでください</h3>
+                    <p>保存先フォルダを確認してから、どちらのボタンを押すか選べます。</p>
+                    <div class="menu-buttons">
+                        <button onclick="switchView('spreadsheet')" class="btn-green">📊 スプレッドシートを作成</button>
+                        <button onclick="switchView('word')" class="btn-blue">📄 ワード出力ページへ</button>
+                    </div>
+                </div>
+
+                <!-- ② スプレッドシート作成入力画面 -->
+                <div id="view_spreadsheet" class="view-screen" style="display: none;">
+                    <button onclick="switchView('menu')" class="btn-back">← メニューに戻る</button>
+                    <h3>📊 スプレッドシート作成</h3>
+                    <div class="form-group">
+                        <label>スプレッドシート名:</label>
+                        <input type="text" id="sheet_title_input" value="カスタムデータシート">
+                    </div>
+                    <div class="form-group">
+                        <label>シート名（カンマ区切り）:</label>
+                        <input type="text" id="sheet_names_input" value="集計用">
+                    </div>
+                    <button onclick="createNewSheet()" class="btn-green">スプレッドシートを自動生成する</button>
+                </div>
+
+                <!-- ③ ワード出力画面（Hello World表示用） -->
+                <div id="view_word" class="view-screen" style="display: none;">
+                    <button onclick="switchView('menu')" class="btn-back">← メニューに戻る</button>
+                    <h1 class="hello-world-text">Hello World</h1>
+                    <p class="sub-text">（ここに今後、スプレッドシートを読み込んでWord形式で出力する機能が入ります）</p>
+                </div>
+
+                <!-- 処理結果・リンク表示エリア -->
+                <div id="content" class="content-msg"></div>
                 <div id="links" class="links-area"></div>
+
             </div>
         </div>
     </div>
 
-    <!-- 外部スクリプトの読み込み -->
     <script src="script.js"></script>
 </body>
 </html>
