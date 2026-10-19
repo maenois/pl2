@@ -8,7 +8,6 @@
     <!-- Google API & Google Identity Services の読み込み -->
     <script async defer src="https://apis.google.com/js/api.js" onload="gapiLoaded()"></script>
     <script async defer src="https://accounts.google.com/gsi/client" onload="gisLoaded()"></script>
-    <script type="text/javascript" src="https://apis.google.com/js/picker.js"></script>
 </head>
 <body>
 
@@ -40,17 +39,18 @@
             <div id="app_section" style="display: none;">
 
                 <!-- ① メニュー選択画面 -->
-                <div id="view_menu" class="view-screen">
+                <div id="view_menu" class="view-screen" style="text-align: center;">
                     <h3>作成するファイルの種類を選んでください</h3>
                     <div class="menu-buttons">
                         <button onclick="switchView('spreadsheet')" class="btn-green">📊 スプレッドシートを作成</button>
-                        <button onclick="switchView('word')" class="btn-blue">📄 ワード出力ページへ</button>
+                        <button onclick="switchView('word')" class="btn-blue">📄 Word作成ページへ</button>
                     </div>
                 </div>
 
                 <!-- ② スプレッドシート作成入力画面（階層式フォルダブラウザ付き） -->
                 <div id="view_spreadsheet" class="view-screen" style="display: none;">
                     <button onclick="switchView('menu')" class="btn-back" style="margin-bottom: 15px;">← メニューに戻る</button>
+                    <div style="clear: both;"></div>
                     <h3>📊 スプレッドシート作成</h3>
                     
                     <!-- 階層式フォルダブラウザ -->
@@ -85,9 +85,10 @@
                     <button onclick="createNewSheet()" class="btn-green" style="width: 100%;">スプレッドシートを自動生成する</button>
                 </div>
 
-                <!-- ③ ワード出力画面 -->
+                <!-- ③ Word作成ページ -->
                 <div id="view_word" class="view-screen" style="display: none;">
-                    <button onclick="switchView('menu')" class="btn-blue" style="margin-bottom: 15px;">← メニューに戻る</button>
+                    <button onclick="switchView('menu')" class="btn-back" style="margin-bottom: 15px;">← メニューに戻る</button>
+                    <div style="clear: both;"></div>
                     <h1 class="hello-world-text">Hello World</h1>
                     <p class="sub-text">（ここに今後、スプレッドシートを読み込んでWord形式で出力する機能が入ります）</p>
                 </div>
