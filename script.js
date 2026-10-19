@@ -19,7 +19,6 @@ function checkPassword() {
 const CLIENT_ID = '893360002885-juvu8vp11q6si42ebojo4i483vd3sqkl.apps.googleusercontent.com';
 const API_KEY = 'AIzaSyDKcb8Ztk9C_zs5oTbNSAcSbXmyNyUEM8Q'; // Google Cloud Consoleで発行した「APIキー」を入れてください
 const APP_ID = '893360002885'; // プロジェクト番号（数値）
-
 const SCOPES = 'https://www.googleapis.com/auth/spreadsheets https://www.googleapis.com/auth/drive.file';
 const DISCOVERY_DOCS = [
     'https://sheets.googleapis.com/$discovery/rest?version=v4',
@@ -114,7 +113,6 @@ function switchView(viewName) {
         document.getElementById('view_menu').style.display = 'block';
     } else if (viewName === 'spreadsheet') {
         document.getElementById('view_spreadsheet').style.display = 'block';
-        // スプレッドシート画面を開いたときにルートフォルダの一覧を読み込む
         loadFolderContent('root', 'マイドライブ');
     } else if (viewName === 'word') {
         document.getElementById('view_word').style.display = 'block';
@@ -124,8 +122,6 @@ function switchView(viewName) {
 // ==========================================
 // 4. 階層式フォルダブラウザの処理
 // ==========================================
-
-// 指定したフォルダIDの中身（サブフォルダ）をGoogleドライブから取得して画面に描画
 async function loadFolderContent(folderId, folderName) {
     const listContainer = document.getElementById('folder_list_container');
     listContainer.innerHTML = '<p style="color: #666; font-size: 13px; text-align: center;">読み込み中...</p>';
@@ -146,7 +142,6 @@ async function loadFolderContent(folderId, folderName) {
                 const item = document.createElement('div');
                 item.className = 'folder-item';
                 item.innerHTML = `📁 ${folder.name}`;
-                // ダブルクリックまたはクリックでそのフォルダの中へ移動
                 item.onclick = () => {
                     currentFolderStack.push({ id: folder.id, name: folder.name });
                     updateBreadcrumb();
@@ -164,7 +159,6 @@ async function loadFolderContent(folderId, folderName) {
     }
 }
 
-// パンくずリスト（現在地）の表示を更新
 function updateBreadcrumb() {
     const breadcrumbContainer = document.getElementById('breadcrumb_container');
     breadcrumbContainer.innerHTML = '';
@@ -174,7 +168,6 @@ function updateBreadcrumb() {
         span.className = 'breadcrumb-item';
         span.innerText = folder.name;
         span.onclick = () => {
-            // 選択したパンくずの位置までスタックを巻き戻す
             currentFolderStack = currentFolderStack.slice(0, index + 1);
             updateBreadcrumb();
             loadFolderContent(folder.id, folder.name);
@@ -190,14 +183,12 @@ function updateBreadcrumb() {
     });
 }
 
-// パンくずから直接移動するための補助
 function navigateToFolder(id, name) {
     currentFolderStack = [{ id: id, name: name }];
     updateBreadcrumb();
     loadFolderContent(id, name);
 }
 
-// 「このフォルダを保存先に決定」ボタンが押されたとき
 function confirmCurrentFolder() {
     const currentActiveFolder = currentFolderStack[currentFolderStack.length - 1];
     selectedFolderId = currentActiveFolder.id;
@@ -212,7 +203,6 @@ function confirmCurrentFolder() {
 // ==========================================
 async function createNewSheet() {
     try {
-        // 確定されたフォルダIDを使用する（未確定の場合は現在の階層を使用）
         const currentActiveFolder = currentFolderStack[currentFolderStack.length - 1];
         const targetFolderId = selectedFolderId !== 'root' ? selectedFolderId : currentActiveFolder.id;
 
@@ -390,9 +380,7 @@ async function createNewSheet() {
             }
         });
 
-        // ----------------------------------------------------
-        // 「備品」シートの処理（リトライ機能付き）
-        // ----------------------------------------------------
+        // 「備品」シートの処理
         let bibinCopied = false;
         if (dataRows.length > 0 && dataRows[0][1]) {
             const prevUrl = dataRows[0][1];
@@ -458,7 +446,6 @@ async function createNewSheet() {
                 }
             });
         }
-        // ----------------------------------------------------
 
         let batchValueData = [];
 
@@ -591,7 +578,7 @@ async function createNewSheet() {
             <a href="https://docs.google.com/spreadsheets/d/${logSheetId}/edit" target="_blank">📊 ログ管理シートを開く</a>
             <a href="${newSheetUrl}" target="_blank">📄 新しく作った「${newSheetTitle}」を開く</a>
             <br><br>
-            <button onclick="switchView('menu')" class="btn-blue" style="display: inline-block;">メニューに戻る</button>
+            <button onclick="switchView('menu')" class="btn-green" style="display: inline-block;">メニューに戻る</button>
         `;
 
     } catch (err) {
