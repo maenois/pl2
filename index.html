@@ -29,7 +29,7 @@
             <!-- Googleログインエリア -->
             <div class="auth-box">
                 <div class="login-actions">
-                    <button id="authorize_button" onclick="handleAuthClick()" style="display: none;" class="btn-blue">Googleログイン</button>
+                    <button id="authorize_button" onclick="handleAuthClick()" style="display: none;" class="btn-google">Googleログイン</button>
                     <button id="signout_button" onclick="handleSignoutClick()" style="display: none;" class="btn-danger">ログアウト</button>
                 </div>
             </div>
@@ -43,19 +43,19 @@
                 <div id="view_menu" class="view-screen">
                     <h3>作成するファイルの種類を選んでください</h3>
                     <div class="menu-buttons">
-                        <button onclick="switchView('spreadsheet')" class="btn-blue">📊 スプレッドシートを作成</button>
+                        <button onclick="switchView('spreadsheet')" class="btn-green">📊 スプレッドシートを作成</button>
                         <button onclick="switchView('word')" class="btn-blue">📄 ワード出力ページへ</button>
                     </div>
                 </div>
 
                 <!-- ② スプレッドシート作成入力画面（階層式フォルダブラウザ付き） -->
                 <div id="view_spreadsheet" class="view-screen" style="display: none;">
-                    <button onclick="switchView('menu')" class="btn-blue" style="margin-bottom: 15px;">← メニューに戻る</button>
+                    <button onclick="switchView('menu')" class="btn-back" style="margin-bottom: 15px;">← メニューに戻る</button>
                     <h3>📊 スプレッドシート作成</h3>
                     
                     <!-- 階層式フォルダブラウザ -->
                     <div class="form-group folder-browser-box">
-                        <label>📁 保存先フォルダの選択:</label>
+                        <label>📁 Googleドライブ保存先フォルダの選択:</label>
                         
                         <!-- パンくずリスト（現在地） -->
                         <div id="breadcrumb_container" class="breadcrumb-trail">
@@ -69,7 +69,7 @@
 
                         <!-- 現在選択中の保存先表示 ＆ 決定ボタン -->
                         <div class="selected-folder-action">
-                            <button onclick="confirmCurrentFolder()" class="btn-blue">📌 このフォルダを保存先に決定</button>
+                            <button onclick="confirmCurrentFolder()" class="btn-green">📌 このフォルダを保存先に決定</button>
                             <span id="target_folder_display" class="target-display">選択中: マイドライブ</span>
                         </div>
                     </div>
@@ -82,7 +82,7 @@
                         <label>シート名（カンマ区切り）:</label>
                         <input type="text" id="sheet_names_input" value="集計用">
                     </div>
-                    <button onclick="createNewSheet()" class="btn-blue" style="width: 100%;">スプレッドシートを自動生成する</button>
+                    <button onclick="createNewSheet()" class="btn-green" style="width: 100%;">スプレッドシートを自動生成する</button>
                 </div>
 
                 <!-- ③ ワード出力画面 -->
