@@ -361,15 +361,15 @@ async function createNewSheet() {
         const monthsA = [12, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11];
         let monthValuesA = monthsA.map(m => [`${m}月`]);
         userSheetsBatchData.push({
-            range: '活動実績・予定!A2:A13',
-            values: monthValuesA
+            range: '活動実績・予定!A1:A13',
+            values: [['活動実績'], ...monthValuesA]
         });
 
         const monthsC = [4, 5, 6, 7, 8, 9, 10, 11, 12, 1, 2, 3];
         let monthValuesC = monthsC.map(m => [`${m}月`]);
         userSheetsBatchData.push({
-            range: '活動実績・予定!C2:C13',
-            values: monthValuesC
+            range: '活動実績・予定!C1:C13',
+            values: [['活動予定'], ...monthValuesC]
         });
 
         await gapi.client.sheets.spreadsheets.values.batchUpdate({
@@ -474,166 +474,4 @@ async function createNewSheet() {
             bValues.push([n]);
         }
         batchValueData.push({
-            range: '科目別合計!B3:B23',
-            values: bValues
-        });
-
-        const subjects = [
-            '科目一覧', 'ゼミナール・研究発表費', '講演会費', '試合・大会費', '連盟費', 
-            '合宿費', '新聞・図書費', '機関紙発行費', '調査費', '会議費', 
-            '印刷・記録費', '事務用消耗品費', '消耗品費', '通信・運輸費', '渉外費', 
-            '借用料', '器具・用具・備品費', '修理費', '薬品医療費', '保険料', '燃料費', '手数料'
-        ];
-        
-        let fullCValues = [];
-        fullCValues.push([subjects[0]]);
-        for (let i = 1; i < subjects.length; i++) {
-            fullCValues.push([subjects[i]]);
-        }
-        fullCValues.push(['']);
-        fullCValues.push(['合計']);
-
-        batchValueData.push({
-            range: '科目別合計!C2:C25',
-            values: fullCValues
-        });
-
-        for (let i = 0; i < userSheetNames.length; i++) {
-            const sName = userSheetNames[i];
-            const currentCol = 4 + i;
-            const colLetter = getColumnLetter(currentCol);
-
-            batchValueData.push({
-                range: `科目別合計!${colLetter}2`,
-                values: [[sName]]
-            });
-
-            batchValueData.push({
-                range: `科目別合計!${colLetter}3`,
-                values: [[`=ARRAYFORMULA(SUMIF('${sName}'!B:B, SEQUENCE(21, 1, 11), '${sName}'!F:F))`]]
-            });
-
-            batchValueData.push({
-                range: `科目別合計!${colLetter}25`,
-                values: [[`=SUM(${colLetter}3:${colLetter}23)`]]
-            });
-        }
-
-        const lastUserCol = 4 + userSheetNames.length - 1;
-        const skippedCol = lastUserCol + 2;
-        const skippedColLetter = getColumnLetter(skippedCol);
-        const nextColLetter = getColumnLetter(skippedCol + 1);
-
-        batchValueData.push({
-            range: `科目別合計!${skippedColLetter}2`,
-            values: [['合計']]
-        });
-        batchValueData.push({
-            range: `科目別合計!${nextColLetter}2`,
-            values: [['科目一覧']]
-        });
-
-        let rowSumFormulas = [];
-        let nextColSubjects = [];
-        for (let r = 3; r <= 23; r++) {
-            const startL = 'D';
-            const endL = getColumnLetter(lastUserCol);
-            rowSumFormulas.push([`=SUM(${startL}${r}:${endL}${r})`]);
-            nextColSubjects.push([fullCValues[r-2][0]]);
-        }
-
-        batchValueData.push({
-            range: `科目別合計!${skippedColLetter}3:${skippedColLetter}23`,
-            values: rowSumFormulas
-        });
-        batchValueData.push({
-            range: `科目別合計!${skippedColLetter}25`,
-            values: [[`=SUM(${skippedColLetter}3:${skippedColLetter}23)`]]
-        });
-
-        batchValueData.push({
-            range: `科目別合計!${nextColLetter}3:${nextColLetter}23`,
-            values: nextColSubjects
-        });
-        batchValueData.push({
-            range: `科目別合計!${nextColLetter}25`,
-            values: [['合計']]
-        });
-
-        await gapi.client.sheets.spreadsheets.values.batchUpdate({
-            spreadsheetId: newSheetId,
-            resource: {
-                valueInputOption: 'USER_ENTERED',
-                data: batchValueData
-            }
-        });
-
-        const newRow = [newSheetTitle, newSheetUrl, new Date().toLocaleString()];
-        let finalRows = [newRow];
-        
-        for (let [sheetId, row] of uniqueSheetMap) {
-            if (sheetId !== newSheetId) {
-                finalRows.push(row);
-            }
-        }
-
-        await gapi.client.sheets.spreadsheets.values.clear({
-            spreadsheetId: logSheetId,
-            range: `${logFirstSheetName}!A:C`
-        });
-
-        await gapi.client.sheets.spreadsheets.values.update({
-            spreadsheetId: logSheetId,
-            range: `${logFirstSheetName}!A1`,
-            valueInputOption: 'USER_ENTERED',
-            resource: {
-                values: [header, ...finalRows]
-            }
-        });
-
-        document.getElementById('content').innerText = '処理完了！スプレッドシートの構築が完了しました。';
-
-        const linksDiv = document.getElementById('links');
-        linksDiv.innerHTML = `
-            <a href="https://docs.google.com/spreadsheets/d/${logSheetId}/edit" target="_blank">📊 ログ管理シートを開く</a>
-            <a href="${newSheetUrl}" target="_blank">📄 新しく作った「${newSheetTitle}」を開く</a>
-            <br><br>
-            <button onclick="switchView('menu')" class="btn-green" style="display: inline-block;">メニューに戻る</button>
-        `;
-
-    } catch (err) {
-        let errorDetails = '';
-        try {
-            errorDetails = JSON.stringify(err, null, 2);
-        } catch (e) {
-            errorDetails = err.message || String(err);
-        }
-        document.getElementById('content').innerHTML = `<pre style="color: red; text-align: left; font-size: 12px; background: #fff; padding: 10px; border: 1px solid #ccc;">エラーが発生しました:\n${errorDetails}</pre>`;
-    }
-}
-
-async function createSpreadsheetInFolder(title, folderId) {
-    const resource = {
-        name: title,
-        mimeType: 'application/vnd.google-apps.spreadsheet'
-    };
-    if (folderId && folderId !== 'root' && folderId !== '') {
-        resource.parents = [folderId];
-    }
-
-    const response = await gapi.client.drive.files.create({
-        resource: resource,
-        fields: 'id, webViewLink'
-    });
-    return response.result.id;
-}
-
-function getColumnLetter(colIndex) {
-    let temp, letter = '';
-    while (colIndex > 0) {
-        temp = (colIndex - 1) % 26;
-        letter = String.fromCharCode(temp + 65) + letter;
-        colIndex = (colIndex - temp - 1) / 26;
-    }
-    return letter;
-}
+            range: '科目別合計!B3
