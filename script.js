@@ -16,9 +16,7 @@ function checkPassword() {
 // ==========================================
 // 1. 設定エリア
 // ==========================================
-const CLIENT_ID = '893360002885-juvu8vp11q6si42ebojo4i483vd3sqkl.apps.googleusercontent.com';
-const API_KEY = 'AIzaSyDKcb8Ztk9C_zs5oTbNSAcSbXmyNyUEM8Q'; // Google Cloud Consoleで発行した「APIキー」を入れてください
-const APP_ID = '893360002885'; // プロジェクト番号（数値）
+
 
 const SCOPES = 'https://www.googleapis.com/auth/spreadsheets https://www.googleapis.com/auth/drive.file https://www.googleapis.com/auth/drive.readonly';
 const DISCOVERY_DOCS = [
